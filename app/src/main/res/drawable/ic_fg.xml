@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stylised top hat + mask silhouette -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#000000" android:pathData="M30,40 L78,34 L80,44 L28,50 Z" />
+    <path android:fillColor="#000000" android:pathData="M40,40 L42,22 L66,20 L68,37 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M28,58 L80,52 L76,72 L58,66 L54,74 L48,66 L32,72 Z" />
+    <path android:fillColor="#000000" android:pathData="M38,62 L48,61 L46,66 Z M60,59 L70,58 L68,63 Z" />
+</vector>
