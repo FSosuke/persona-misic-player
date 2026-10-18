@@ -33,7 +33,7 @@ fun unitStarPath(innerRatio: Float = 0.45f, points: Int = 5): Path = Path().appl
 }
 
 /** The nested-star wallpaper behind Persona 5 menus. */
-fun Modifier.starPattern(background: Color, starColor: Color, cell: Float = 140f): Modifier = drawWithCache {
+fun Modifier.starPattern(background: Color, starColor: Color, cell: Float = 140f, strokeWidth: Float = 5f): Modifier = drawWithCache {
     val star = unitStarPath()
     val random = Random(42)
     val width = size.width
@@ -59,7 +59,7 @@ fun Modifier.starPattern(background: Color, starColor: Color, cell: Float = 140f
                     for (ring in 0 until 3) {
                         val r = radius * (1f - ring * 0.3f)
                         scale(r, r, pivot = Offset.Zero) {
-                            drawPath(star, starColor, style = Stroke(width = 5f / r))
+                            drawPath(star, starColor, style = Stroke(width = strokeWidth / r))
                         }
                     }
                 }

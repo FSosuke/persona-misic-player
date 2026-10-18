@@ -35,6 +35,23 @@ class AppSettings(context: Context) {
     /** SponsorBlock "music_offtopic" skipping, the way ReVanced does it for YouTube Music. */
     val skipNonMusic: StateFlow<Boolean> = _skipNonMusic.asStateFlow()
 
+    private val _playerBackground = MutableStateFlow(prefs.getString(KEY_PLAYER_BG, null))
+    /** Optional user image (file path) behind the player, shown as P5 duotone. */
+    val playerBackground: StateFlow<String?> = _playerBackground.asStateFlow()
+
+    private val _homeBackground = MutableStateFlow(prefs.getString(KEY_HOME_BG, null))
+    val homeBackground: StateFlow<String?> = _homeBackground.asStateFlow()
+
+    fun setPlayerBackground(path: String?) {
+        prefs.edit().putString(KEY_PLAYER_BG, path).apply()
+        _playerBackground.value = path
+    }
+
+    fun setHomeBackground(path: String?) {
+        prefs.edit().putString(KEY_HOME_BG, path).apply()
+        _homeBackground.value = path
+    }
+
     fun setTheme(value: PersonaTheme) {
         prefs.edit().putString(KEY_THEME, value.name).apply()
         _theme.value = value
@@ -54,5 +71,7 @@ class AppSettings(context: Context) {
         const val KEY_THEME = "theme"
         const val KEY_QUALITY = "quality"
         const val KEY_SKIP_NON_MUSIC = "skip_non_music"
+        const val KEY_PLAYER_BG = "player_background"
+        const val KEY_HOME_BG = "home_background"
     }
 }

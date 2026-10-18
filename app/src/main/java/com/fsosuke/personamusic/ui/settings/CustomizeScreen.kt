@@ -28,6 +28,17 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import com.fsosuke.personamusic.ui.components.DuotoneImage
+import com.fsosuke.personamusic.ui.components.importBackground
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -56,6 +67,25 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
     val theme by settings.theme.collectAsStateWithLifecycle()
     val quality by settings.quality.collectAsStateWithLifecycle()
     val skipNonMusic by settings.skipNonMusic.collectAsStateWithLifecycle()
+    val playerBackground by settings.playerBackground.collectAsStateWithLifecycle()
+    val homeBackground by settings.homeBackground.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var picking by remember { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        val target = picking
+        picking = null
+        if (uri != null && target != null) {
+            scope.launch {
+                val path = importBackground(context, uri, target) ?: return@launch
+                if (target == "player") settings.setPlayerBackground(path) else settings.setHomeBackground(path)
+            }
+        }
+    }
+    fun pick(target: String) {
+        picking = target
+        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item {
@@ -89,6 +119,24 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                 Spacer(Modifier.width(14.dp))
                 Text(option.label, color = Color.White, style = PersonaType.body, modifier = Modifier.weight(1f))
                 if (selected) Icon(Icons.Filled.CheckCircle, null, tint = optionColors.accent)
+            }
+        }
+
+        item {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                CalloutBanner("Backgrounds", Modifier.padding(end = 12.dp, top = 20.dp))
+            }
+        }
+        item {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    "Use your own artwork (e.g. a Persona 5 wallpaper). It is inked in black & white and, " +
+                        "in the player, tinted in the theme colour so it fits the style.",
+                    color = colors.muted,
+                    style = PersonaType.caption,
+                )
+                BackgroundRow("Player", playerBackground, colors.accent, onPick = { pick("player") }, onRemove = { settings.setPlayerBackground(null) })
+                BackgroundRow("Home", homeBackground, null, onPick = { pick("home") }, onRemove = { settings.setHomeBackground(null) })
             }
         }
 
@@ -189,5 +237,25 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun BackgroundRow(label: String, path: String?, tint: Color?, onPick: () -> Unit, onRemove: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(width = 64.dp, height = 96.dp).border(3.dp, Color.White).background(Color(0xFF1A1A1A))) {
+            if (path != null) DuotoneImage(path, tint = tint, modifier = Modifier.matchParentSize())
+        }
+        Spacer(Modifier.width(16.dp))
+        Text(label, color = Color.White, style = PersonaType.title, modifier = Modifier.weight(1f))
+        if (path != null) {
+            Text(
+                "REMOVE",
+                color = Color(0xFFAAAAAA),
+                style = PersonaType.label,
+                modifier = Modifier.clickable(onClick = onRemove).padding(8.dp),
+            )
+        }
+        PersonaButton(if (path == null) "Pick" else "Change", onClick = onPick)
     }
 }

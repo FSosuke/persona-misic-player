@@ -11,7 +11,12 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
   - **Skip non-music parts** via SponsorBlock (`music_offtopic`), like ReVanced.
   - Audio quality choice (best / data saver).
 - **YouTube Music account (optional)** – sign in (Customize → Sign in) to get your personal recommendations ("Quick picks", mixes, …) on Home and your YT Music playlists, albums and Liked Music on the playlist board. The login cookie is stored encrypted with the Android Keystore and only sent to music.youtube.com. Playback still goes through NewPipe, so still no ads.
-- **Persona UI** – ransom-note titles, star-pattern backgrounds, slanted cards, the red halftone playlist board, the star pause menu (Playlist / Stats / Customize / Share).
+- **Persona UI** – ransom-note titles in mixed display fonts, star-pattern backgrounds, slanted cards, the red halftone playlist board, the star pause menu (Playlist / Stats / Customize / Share).
+  - Player with red slashes, sparkles, "CHANGE" graffiti, torn-paper control band, grinning-note seek bar and chunky P5 icons.
+  - **"NEXT" queue** – cut-out cards on a red board, drag to reorder, swipe to remove.
+  - **Lyrics** (synced where available, via LRCLIB) on a calling card held by white gloves.
+  - **Per-song stats** – times played, real listening time, average per play.
+  - **Your own backgrounds** – pick any image for the player/home; it gets inked and tinted P5-style.
 - **Home** – Recent, Most Played, Song Log and a 3×3 Speed Dial built from your listening history.
 - **Playlists** – create, rename, delete; Favourites built in.
 - **Stats** – plays, hours listened, top artists and top songs.

@@ -60,5 +60,10 @@ class MusicRepository(
 
     suspend fun removeFromPlaylist(playlistId: Long, songId: String) = dao.removeEntry(playlistId, songId)
 
-    suspend fun logPlay(songId: String) = dao.insertPlayEvent(PlayEvent(songId = songId))
+    /** Returns the new play event's id so the listened time can be filled in later. */
+    suspend fun logPlay(songId: String): Long = dao.insertPlayEvent(PlayEvent(songId = songId))
+
+    suspend fun setListened(eventId: Long, listenedMs: Long) = dao.updateListened(eventId, listenedMs)
+
+    fun songStats(songId: String) = dao.songStats(songId)
 }

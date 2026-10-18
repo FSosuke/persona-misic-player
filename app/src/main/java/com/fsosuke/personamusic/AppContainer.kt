@@ -4,6 +4,7 @@ import android.content.Context
 import com.fsosuke.personamusic.data.AppDatabase
 import com.fsosuke.personamusic.data.AppSettings
 import com.fsosuke.personamusic.data.LocalMusicScanner
+import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.youtube.InnerTube
@@ -30,6 +31,7 @@ class AppContainer(context: Context) {
     val repository = MusicRepository(database.musicDao(), LocalMusicScanner(context))
     val youTube = YouTubeMusic(httpClient, settings)
     val sponsorBlock = SponsorBlock(httpClient)
+    val lyrics = LyricsRepository(httpClient)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, appScope)

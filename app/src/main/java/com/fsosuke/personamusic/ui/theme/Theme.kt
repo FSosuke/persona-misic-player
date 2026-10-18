@@ -1,6 +1,7 @@
 package com.fsosuke.personamusic.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -8,7 +9,6 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -45,16 +45,21 @@ fun PersonaTheme.colors(): PersonaColors = when (this) {
 val LocalPersonaColors = staticCompositionLocalOf { PersonaTheme.P5.colors() }
 
 object PersonaType {
-    val title = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontSize = 18.sp)
-    val body = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-    val caption = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+    val title = TextStyle(fontFamily = PersonaFonts.rubik, fontWeight = FontWeight.Black, fontSize = 18.sp)
+    val body = TextStyle(fontFamily = PersonaFonts.rubik, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+    val caption = TextStyle(fontFamily = PersonaFonts.rubik, fontWeight = FontWeight.Medium, fontSize = 13.sp)
     val label = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Black,
+        fontFamily = PersonaFonts.archivoBlack,
         fontStyle = FontStyle.Italic,
         fontSize = 16.sp,
         letterSpacing = 1.sp,
     )
+    /** Big condensed headline, e.g. "NEXT", "STATS". */
+    val display = TextStyle(fontFamily = PersonaFonts.anton, fontSize = 44.sp, letterSpacing = 1.sp)
+    /** Comic-style shout, e.g. "PLAYING". */
+    val shout = TextStyle(fontFamily = PersonaFonts.bangers, fontSize = 22.sp, letterSpacing = 1.sp)
+    /** Spray-painted graffiti, e.g. "CHANGE". */
+    val graffiti = TextStyle(fontFamily = PersonaFonts.marker, fontSize = 40.sp)
 }
 
 @Composable
@@ -72,6 +77,28 @@ fun PersonaMusicTheme(theme: PersonaTheme, content: @Composable () -> Unit) {
         surfaceContainer = Color(0xFF111111),
     )
     CompositionLocalProvider(LocalPersonaColors provides colors) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = Typography().withFont(PersonaFonts.rubik),
+            content = content,
+        )
     }
 }
+
+private fun Typography.withFont(family: androidx.compose.ui.text.font.FontFamily) = Typography(
+    displayLarge = displayLarge.copy(fontFamily = family),
+    displayMedium = displayMedium.copy(fontFamily = family),
+    displaySmall = displaySmall.copy(fontFamily = family),
+    headlineLarge = headlineLarge.copy(fontFamily = family),
+    headlineMedium = headlineMedium.copy(fontFamily = family),
+    headlineSmall = headlineSmall.copy(fontFamily = family),
+    titleLarge = titleLarge.copy(fontFamily = family),
+    titleMedium = titleMedium.copy(fontFamily = family),
+    titleSmall = titleSmall.copy(fontFamily = family),
+    bodyLarge = bodyLarge.copy(fontFamily = family),
+    bodyMedium = bodyMedium.copy(fontFamily = family),
+    bodySmall = bodySmall.copy(fontFamily = family),
+    labelLarge = labelLarge.copy(fontFamily = family),
+    labelMedium = labelMedium.copy(fontFamily = family),
+    labelSmall = labelSmall.copy(fontFamily = family),
+)

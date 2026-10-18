@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
@@ -56,6 +57,8 @@ data class PlayEvent(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val songId: String,
     val playedAt: Long = System.currentTimeMillis(),
+    /** How long this play actually ran (paused time excluded). */
+    @ColumnInfo(defaultValue = "0") val listenedMs: Long = 0,
 )
 
 data class SongWithPlays(
@@ -78,4 +81,11 @@ data class PlaylistSummary(
 data class ArtistPlays(
     val name: String,
     val plays: Int,
+)
+
+data class SongStats(
+    val plays: Int,
+    val listenedMs: Long,
+    val firstPlayed: Long?,
+    val lastPlayed: Long?,
 )

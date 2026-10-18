@@ -38,6 +38,7 @@ import com.fsosuke.personamusic.ui.components.Tab
 import com.fsosuke.personamusic.ui.home.HomeScreen
 import com.fsosuke.personamusic.ui.library.LibraryScreen
 import com.fsosuke.personamusic.ui.player.NowPlayingScreen
+import com.fsosuke.personamusic.ui.player.QueueScreen
 import com.fsosuke.personamusic.ui.playlist.PlaylistDetailScreen
 import com.fsosuke.personamusic.ui.playlist.PlaylistsScreen
 import com.fsosuke.personamusic.ui.settings.CustomizeScreen
@@ -48,6 +49,7 @@ import com.fsosuke.personamusic.ui.youtube.YtPlaylistScreen
 
 private object Routes {
     const val PLAYER = "player"
+    const val QUEUE = "queue"
     const val STATS = "stats"
     const val CUSTOMIZE = "customize"
     const val PLAYLIST = "playlist/{id}"
@@ -67,7 +69,7 @@ fun PersonaMusicApp() {
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val position by container.player.positionMs.collectAsStateWithLifecycle()
 
-    val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN
+    val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
         ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST) Tab.Playlists else null
 
@@ -121,6 +123,7 @@ fun PersonaMusicApp() {
             ) {
                 NowPlayingScreen(
                     onClose = { nav.popBackStack() },
+                    onOpenQueue = { nav.navigate(Routes.QUEUE) },
                     onOpenStats = { nav.navigate(Routes.STATS) },
                     onOpenCustomize = { nav.navigate(Routes.CUSTOMIZE) },
                 )
@@ -135,6 +138,11 @@ fun PersonaMusicApp() {
             composable(Routes.YT_LOGIN) {
                 YtLoginScreen(onDone = { nav.popBackStack() }, onBack = { nav.popBackStack() })
             }
+            composable(
+                Routes.QUEUE,
+                enterTransition = { slideInVertically(tween(240)) { it } },
+                popExitTransition = { slideOutVertically(tween(200)) { it } },
+            ) { QueueScreen(onClose = { nav.popBackStack() }) }
             composable(Routes.STATS) { StatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CUSTOMIZE) { CustomizeScreen(
                     onBack = { nav.popBackStack() },

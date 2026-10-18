@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
+import com.fsosuke.personamusic.ui.theme.PersonaFonts
 import kotlin.random.Random
 
 enum class RansomStyle {
@@ -43,7 +44,7 @@ private data class RansomLetter(
     val lift: Float,
 )
 
-private val families = listOf(FontFamily.Serif, FontFamily.SansSerif, FontFamily.Monospace, FontFamily.SansSerif, FontFamily.Serif)
+private val families = PersonaFonts.ransom
 
 /**
  * The Persona 5 "ransom note" look: every letter gets its own font, size, tilt and paper scrap.

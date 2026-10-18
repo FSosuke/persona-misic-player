@@ -146,6 +146,7 @@ class PlayerConnection(private val context: Context) {
     fun seekTo(positionMs: Long) = withController { seekTo(positionMs) }
     fun skipToQueueItem(index: Int) = withController { seekToDefaultPosition(index); play() }
     fun removeQueueItem(index: Int) = withController { removeMediaItem(index) }
+    fun moveQueueItem(from: Int, to: Int) = withController { moveMediaItem(from, to) }
     fun toggleShuffle() = withController { shuffleModeEnabled = !shuffleModeEnabled }
 
     fun cycleRepeat() = withController {

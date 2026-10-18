@@ -3,6 +3,7 @@ package com.fsosuke.personamusic.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -25,6 +26,8 @@ import com.fsosuke.personamusic.youtube.YouTubeMusic
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +44,11 @@ class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
     private var skipJob: Job? = null
     private var consecutiveErrors = 0
+
+    // Listening-time bookkeeping for the play event of the current item.
+    private var currentEvent: Deferred<Long>? = null
+    private var listenedMs = 0L
+    private var playingSince: Long? = null
 
     private val container get() = (application as PersonaApp).container
 
@@ -95,6 +103,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        flushListened()
         session?.run {
             player.release()
             release()
@@ -102,6 +111,17 @@ class PlaybackService : MediaSessionService() {
         session = null
         scope.cancel()
         super.onDestroy()
+    }
+
+    /** Adds the running stretch to the current play event and persists the total. */
+    private fun flushListened() {
+        playingSince?.let { listenedMs += SystemClock.elapsedRealtime() - it }
+        playingSince = if (session?.player?.isPlaying == true) SystemClock.elapsedRealtime() else null
+        val event = currentEvent ?: return
+        val total = listenedMs
+        container.appScope.launch {
+            runCatching { container.repository.setListened(event.await(), total) }
+        }
     }
 
     /** Media3 strips the playback uri when items travel through a controller; restore it. */
@@ -121,14 +141,26 @@ class PlaybackService : MediaSessionService() {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             skipJob?.cancel()
+            flushListened()
+            currentEvent = null
+            listenedMs = 0
+            playingSince = if (player.isPlaying) SystemClock.elapsedRealtime() else null
             mediaItem ?: return
-            scope.launch(Dispatchers.IO) { container.repository.logPlay(mediaItem.mediaId) }
+            currentEvent = scope.async(Dispatchers.IO) { container.repository.logPlay(mediaItem.mediaId) }
 
             val videoId = mediaItem.requestMetadata.mediaUri
                 ?.takeIf { it.scheme == YouTubeMusic.SCHEME }
                 ?.schemeSpecificPart
             if (videoId != null && container.settings.skipNonMusic.value) {
                 skipJob = scope.launch { skipNonMusic(videoId) }
+            }
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (isPlaying) {
+                playingSince = SystemClock.elapsedRealtime()
+            } else {
+                flushListened()
             }
         }
 

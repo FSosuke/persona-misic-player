@@ -92,7 +92,16 @@ interface MusicDao {
     // --- History & stats -------------------------------------------------------------------
 
     @Insert
-    suspend fun insertPlayEvent(event: PlayEvent)
+    suspend fun insertPlayEvent(event: PlayEvent): Long
+
+    @Query("UPDATE play_events SET listenedMs = :listenedMs WHERE id = :id")
+    suspend fun updateListened(id: Long, listenedMs: Long)
+
+    @Query(
+        "SELECT COUNT(*) AS plays, COALESCE(SUM(listenedMs), 0) AS listenedMs, " +
+            "MIN(playedAt) AS firstPlayed, MAX(playedAt) AS lastPlayed FROM play_events WHERE songId = :songId"
+    )
+    fun songStats(songId: String): Flow<SongStats>
 
     @Query(
         "SELECT s.* FROM songs s JOIN " +
@@ -117,7 +126,7 @@ interface MusicDao {
     @Query("SELECT COUNT(*) FROM play_events")
     fun totalPlays(): Flow<Int>
 
-    @Query("SELECT COALESCE(SUM(s.durationMs), 0) FROM play_events e JOIN songs s ON s.id = e.songId")
+    @Query("SELECT COALESCE(SUM(listenedMs), 0) FROM play_events")
     fun totalListenedMs(): Flow<Long>
 
     @Query("SELECT COUNT(DISTINCT songId) FROM play_events")

@@ -83,22 +83,9 @@ fun MiniPlayer(
                 Text(song.title, color = Color.White, style = PersonaType.title.copy(fontSize = 16.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(song.artist, color = colors.muted, style = PersonaType.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            IconButton(onClick = onTogglePlay) {
-                Icon(
-                    if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = "Play/Pause",
-                    tint = Color.White,
-                    modifier = Modifier.size(34.dp).graphicsLayer { rotationZ = -8f },
-                )
-            }
-            IconButton(onClick = onNext) {
-                Icon(
-                    Icons.Filled.SkipNext,
-                    contentDescription = "Next",
-                    tint = Color.White,
-                    modifier = Modifier.size(30.dp).graphicsLayer { rotationZ = -8f },
-                )
-            }
+            ChunkyIcon(if (state.isPlaying) Chunky.Pause else Chunky.Play, size = 36.dp, onClick = onTogglePlay)
+            Spacer(Modifier.width(18.dp))
+            ChunkyIcon(Chunky.Next, size = 34.dp, onClick = onNext)
         }
         Canvas(Modifier.fillMaxWidth().height(16.dp)) {
             val w = size.width

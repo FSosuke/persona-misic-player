@@ -47,6 +47,8 @@ import com.fsosuke.personamusic.data.SongWithPlays
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.CalloutBanner
 import com.fsosuke.personamusic.ui.components.DashedSectionTitle
+import com.fsosuke.personamusic.ui.components.DuotoneImage
+import com.fsosuke.personamusic.ui.components.StampLabel
 import com.fsosuke.personamusic.ui.components.EmptyState
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaButton
@@ -86,6 +88,10 @@ fun HomeScreen(
         vm.remember(songs)
         container.player.play(songs, index)
     }
+
+    val homeBackground by container.settings.homeBackground.collectAsStateWithLifecycle()
+    Box(Modifier.fillMaxSize()) {
+    homeBackground?.let { DuotoneImage(it, tint = null, modifier = Modifier.fillMaxSize(), alpha = 0.3f) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item {
@@ -146,12 +152,18 @@ fun HomeScreen(
             } else {
                 item { RecentSection(recent, currentId, isPlaying = playerState.isPlaying) { play(recent, it) } }
             }
-            if (songLog.isNotEmpty()) {
-                item { SongLogSection(songLog) { entry -> play(listOf(entry.song), 0) } }
-            }
             if (mostPlayed.isNotEmpty()) {
                 item { MostPlayedSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
-                item { SpeedDialSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
+            }
+            if (songLog.isNotEmpty() || mostPlayed.isNotEmpty()) {
+                item {
+                    // The monochrome star-burst board from the P5 phone menus.
+                    Column(Modifier.fillMaxWidth().starPattern(Color.Black, Color(0xFFEDEDED), cell = 230f, strokeWidth = 16f)) {
+                        if (songLog.isNotEmpty()) SongLogSection(songLog) { entry -> play(listOf(entry.song), 0) }
+                        if (mostPlayed.isNotEmpty()) SpeedDialSection(mostPlayed) { play(mostPlayed.map { it.song }, it) }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
             }
             if (ytAccount == null) {
                 item {
@@ -192,6 +204,7 @@ fun HomeScreen(
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
     }
 }
 
@@ -284,15 +297,15 @@ private fun MostPlayedSection(entries: List<SongWithPlays>, onPlay: (Int) -> Uni
 @Composable
 private fun SongLogSection(entries: List<LoggedPlay>, onPlay: (LoggedPlay) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            CalloutBanner("Song log", Modifier.padding(end = 12.dp))
+        Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.CenterEnd) {
+            StampLabel("Song", "Log", Modifier.padding(end = 20.dp), tilt = -10f)
         }
         Column(
             Modifier
                 .padding(horizontal = 20.dp, vertical = 16.dp)
                 .rotate(-2f)
                 .background(Color.White)
-                .padding(6.dp)
+                .padding(10.dp)
                 .background(Color.Black)
                 .padding(vertical = 8.dp),
         ) {
@@ -333,13 +346,15 @@ private fun SongLogSection(entries: List<LoggedPlay>, onPlay: (LoggedPlay) -> Un
 private fun SpeedDialSection(entries: List<SongWithPlays>, onPlay: (Int) -> Unit) {
     val colors = LocalPersonaColors.current
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        CalloutBanner("Speed dial", Modifier.padding(start = 12.dp), pointLeft = true)
+        Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.CenterEnd) {
+            StampLabel("Speed", "Dial", Modifier.padding(end = 28.dp), tilt = -12f)
+        }
         Column(
             Modifier
                 .padding(20.dp)
                 .rotate(1.5f)
                 .background(Color.White)
-                .padding(6.dp)
+                .padding(12.dp)
                 .starPattern(Color.Black, Color(0xFF1C1C1C), cell = 90f)
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
