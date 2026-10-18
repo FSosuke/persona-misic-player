@@ -36,12 +36,14 @@ fun unitStarPath(innerRatio: Float = 0.45f, points: Int = 5): Path = Path().appl
 fun Modifier.starPattern(background: Color, starColor: Color, cell: Float = 140f): Modifier = drawWithCache {
     val star = unitStarPath()
     val random = Random(42)
+    val width = size.width
+    val height = size.height
     val stars = buildList {
         var y = -cell / 2
         var row = 0
-        while (y < size.height + cell) {
+        while (y < height + cell) {
             var x = if (row % 2 == 0) 0f else cell / 2
-            while (x < size.width + cell) {
+            while (x < width + cell) {
                 add(Triple(Offset(x, y), cell * (0.35f + random.nextFloat() * 0.35f), random.nextFloat() * 72f))
                 x += cell
             }
@@ -69,12 +71,14 @@ fun Modifier.starPattern(background: Color, starColor: Color, cell: Float = 140f
 /** Comic-book halftone dots, used on the red playlist board. */
 fun Modifier.halftone(background: Color, dotColor: Color, step: Float = 16f, dotSize: Float = 6f): Modifier =
     drawWithCache {
+        val width = size.width
+        val height = size.height
         val points = buildList {
             var y = 0f
             var row = 0
-            while (y < size.height + step) {
+            while (y < height + step) {
                 var x = if (row % 2 == 0) 0f else step / 2
-                while (x < size.width + step) {
+                while (x < width + step) {
                     add(Offset(x, y))
                     x += step
                 }

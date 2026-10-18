@@ -42,14 +42,14 @@ class HomeViewModel(
         .debounce(450)
         .flatMapLatest { q ->
             if (q.isEmpty()) {
-                flowOf(OnlineResults.Idle)
+                flowOf<OnlineResults>(OnlineResults.Idle)
             } else {
-                flow {
+                flow<OnlineResults> {
                     emit(OnlineResults.Loading)
                     emit(
                         runCatching { youTube.searchSongs(q) }
                             .fold(
-                                onSuccess = { OnlineResults.Loaded(it) },
+                                onSuccess = { OnlineResults.Loaded(it) as OnlineResults },
                                 onFailure = { OnlineResults.Failed(it.localizedMessage ?: it.javaClass.simpleName) },
                             )
                     )
