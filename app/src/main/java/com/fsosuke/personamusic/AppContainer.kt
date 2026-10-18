@@ -1,0 +1,31 @@
+package com.fsosuke.personamusic
+
+import android.content.Context
+import com.fsosuke.personamusic.data.AppDatabase
+import com.fsosuke.personamusic.data.AppSettings
+import com.fsosuke.personamusic.data.LocalMusicScanner
+import com.fsosuke.personamusic.data.MusicRepository
+import com.fsosuke.personamusic.playback.PlayerConnection
+import com.fsosuke.personamusic.youtube.SponsorBlock
+import com.fsosuke.personamusic.youtube.YouTubeMusic
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
+
+/** Hand-rolled dependency container; the app is small enough not to need a DI framework. */
+class AppContainer(context: Context) {
+    /** For fire-and-forget writes that must outlive the screen that started them. */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val settings = AppSettings(context)
+    val httpClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+    val database = AppDatabase.create(context)
+    val repository = MusicRepository(database.musicDao(), LocalMusicScanner(context))
+    val youTube = YouTubeMusic(httpClient, settings)
+    val sponsorBlock = SponsorBlock(httpClient)
+    val player = PlayerConnection(context)
+}

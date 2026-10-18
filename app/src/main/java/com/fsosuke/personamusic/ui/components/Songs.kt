@@ -1,0 +1,305 @@
+package com.fsosuke.personamusic.ui.components
+
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.fsosuke.personamusic.AppContainer
+import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.data.SongSource
+import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
+import com.fsosuke.personamusic.ui.theme.PersonaType
+import kotlinx.coroutines.launch
+
+val LocalAppContainer = staticCompositionLocalOf<AppContainer> { error("AppContainer not provided") }
+
+@Composable
+fun Artwork(uri: String?, modifier: Modifier = Modifier, shape: Shape = RectangleShape) {
+    val colors = LocalPersonaColors.current
+    Box(modifier.clip(shape).background(Color(0xFF202020)), contentAlignment = Alignment.Center) {
+        Icon(Icons.Filled.MusicNote, contentDescription = null, tint = colors.pattern, modifier = Modifier.fillMaxSize(0.5f))
+        if (uri != null) {
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
+    }
+}
+
+/** Plain list row as on the search screen: title, artist, duration, overflow menu. */
+@Composable
+fun SongRow(
+    song: Song,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    showArtwork: Boolean = false,
+    isCurrent: Boolean = false,
+    extraMenu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
+) {
+    val colors = LocalPersonaColors.current
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 20.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (showArtwork) {
+            Artwork(song.artworkUri, Modifier.size(48.dp).border(2.dp, if (isCurrent) colors.accent else Color.White))
+            Spacer(Modifier.width(14.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                song.title,
+                color = if (isCurrent) colors.accent else Color(0xFFF2E9E9),
+                style = PersonaType.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                song.artist,
+                color = colors.muted,
+                style = PersonaType.caption,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(formatDuration(song.durationMs), color = colors.muted, style = PersonaType.caption)
+        SongMenuButton(song, extraMenu = extraMenu)
+    }
+}
+
+/** Overflow menu with queue/like/playlist/share actions, usable on any song. */
+@Composable
+fun SongMenuButton(
+    song: Song,
+    modifier: Modifier = Modifier,
+    tint: Color = Color(0xFF9A9A9A),
+    extraMenu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
+) {
+    val container = LocalAppContainer.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var expanded by remember { mutableStateOf(false) }
+    var addToPlaylist by remember { mutableStateOf(false) }
+    val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
+
+    Box(modifier) {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = tint)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            containerColor = Color.Black,
+            modifier = Modifier.border(2.dp, Color.White),
+        ) {
+            MenuEntry("Play next", Icons.Filled.SkipNext) {
+                expanded = false
+                scope.launch { container.repository.remember(listOf(song)) }
+                container.player.playNext(song)
+            }
+            MenuEntry("Add to queue", Icons.AutoMirrored.Filled.QueueMusic) {
+                expanded = false
+                scope.launch { container.repository.remember(listOf(song)) }
+                container.player.addToQueue(song)
+            }
+            MenuEntry(if (liked) "Remove from favourites" else "Add to favourites", if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder) {
+                expanded = false
+                scope.launch { container.repository.setLiked(song, !liked) }
+            }
+            MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
+                expanded = false
+                addToPlaylist = true
+            }
+            if (song.source == SongSource.YOUTUBE) {
+                MenuEntry("Share", Icons.Filled.Share) {
+                    expanded = false
+                    shareSong(context, song)
+                }
+            }
+            extraMenu?.invoke { expanded = false }
+        }
+    }
+    if (addToPlaylist) {
+        AddToPlaylistDialog(song, onDismiss = { addToPlaylist = false })
+    }
+}
+
+@Composable
+fun MenuEntry(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(text, color = Color.White, style = PersonaType.body) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = LocalPersonaColors.current.accent) },
+        onClick = onClick,
+    )
+}
+
+fun shareSong(context: Context, song: Song) {
+    val text = if (song.source == SongSource.YOUTUBE) "${song.title} – ${song.artist}\n${song.uri}" else "${song.title} – ${song.artist}"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share song").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+@Composable
+fun AddToPlaylistDialog(song: Song, onDismiss: () -> Unit) {
+    val container = LocalAppContainer.current
+    val scope = rememberCoroutineScope()
+    val playlists by container.repository.playlists.collectAsState(initial = emptyList())
+    var creating by rememberSaveable { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        modifier = Modifier.border(3.dp, Color.White),
+        shape = RectangleShape,
+        title = { RansomText("Add to playlist", fontSize = 22.sp) },
+        text = {
+            if (creating) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
+            } else {
+                LazyColumn(Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    items(playlists, key = { it.id }) { playlist ->
+                        Text(
+                            playlist.name,
+                            color = Color.White,
+                            style = PersonaType.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    scope.launch { container.repository.addToPlaylist(playlist.id, song) }
+                                    onDismiss()
+                                }
+                                .padding(vertical = 12.dp),
+                        )
+                        HorizontalDivider(color = Color(0xFF333333))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (creating) {
+                TextButton(onClick = {
+                    val trimmed = name.trim()
+                    if (trimmed.isNotEmpty()) {
+                        scope.launch {
+                            val id = container.repository.createPlaylist(trimmed)
+                            container.repository.addToPlaylist(id, song)
+                        }
+                        onDismiss()
+                    }
+                }) { Text("Create") }
+            } else {
+                TextButton(onClick = { creating = true }) { Text("New playlist") }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** The highlighted red-framed card from the search screen. */
+@Composable
+fun TopResultCard(song: Song, onPlay: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = LocalPersonaColors.current
+    val container = LocalAppContainer.current
+    val scope = rememberCoroutineScope()
+    val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
+
+    Box(modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Row(
+            Modifier
+                .rotate(-1f)
+                .fillMaxWidth()
+                .background(colors.accent, slantShape(0.02f))
+                .padding(3.dp)
+                .background(Color(0xFF141414), slantShape(0.02f))
+                .clickable(onClick = onPlay)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Artwork(song.artworkUri, Modifier.size(84.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(song.title, color = colors.accent, style = PersonaType.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.size(6.dp))
+                Text(song.artist, color = colors.muted, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            IconButton(onClick = { scope.launch { container.repository.setLiked(song, !liked) } }) {
+                Icon(
+                    if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = "Favourite",
+                    tint = if (liked) colors.accent else Color(0xFFBBBBBB),
+                )
+            }
+            Box(
+                Modifier.size(56.dp).clip(CircleShape).background(colors.accent).clickable(onClick = onPlay),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = colors.onAccent, modifier = Modifier.size(36.dp))
+            }
+        }
+    }
+}
