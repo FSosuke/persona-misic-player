@@ -48,7 +48,10 @@ class MusicRepository(
 
     suspend fun createPlaylist(name: String): Long = dao.insertPlaylist(Playlist(name = name))
     suspend fun renamePlaylist(id: Long, name: String) = dao.renamePlaylist(id, name)
-    suspend fun deletePlaylist(id: Long) = dao.deletePlaylist(id)
+    suspend fun deletePlaylist(id: Long) {
+        dao.clearPlaylist(id)
+        dao.deletePlaylistRow(id)
+    }
 
     suspend fun addToPlaylist(playlistId: Long, song: Song) {
         dao.upsertSongs(listOf(song))

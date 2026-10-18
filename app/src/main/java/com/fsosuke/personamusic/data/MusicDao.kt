@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -62,12 +61,6 @@ interface MusicDao {
 
     @Query("DELETE FROM playlist_entries WHERE playlistId = :id")
     suspend fun clearPlaylist(id: Long)
-
-    @Transaction
-    suspend fun deletePlaylist(id: Long) {
-        clearPlaylist(id)
-        deletePlaylistRow(id)
-    }
 
     @Query("SELECT * FROM playlists WHERE id = :id")
     fun playlist(id: Long): Flow<Playlist?>
