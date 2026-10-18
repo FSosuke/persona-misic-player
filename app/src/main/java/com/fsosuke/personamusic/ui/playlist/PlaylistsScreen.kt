@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.fsosuke.personamusic.data.PlaylistSummary
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaHeader
@@ -61,7 +60,7 @@ private val RowHeight = 170.dp
  * black line, like the confidant map in Persona 5.
  */
 @Composable
-fun PlaylistsScreen(onOpen: (Long) -> Unit, contentPadding: PaddingValues) {
+fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
     val colors = LocalPersonaColors.current
     val scope = rememberCoroutineScope()
@@ -69,9 +68,12 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, contentPadding: PaddingValues) {
     val liked by container.repository.likedSongs.collectAsStateWithLifecycle(initialValue = emptyList())
     var creating by rememberSaveable { mutableStateOf(false) }
 
+    val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
+
     val cards = buildList {
-        add(PlaylistSummary(FAVOURITES_ID, "Favourites", liked.size, liked.firstOrNull { it.artworkUri != null }?.artworkUri))
-        addAll(playlists)
+        add(BoardCard("fav", "Favourites", "${liked.size}", liked.firstOrNull { it.artworkUri != null }?.artworkUri, isFavourites = true) { onOpen(FAVOURITES_ID) })
+        playlists.forEach { p -> add(BoardCard("local-${p.id}", p.name, "${p.songCount}", p.coverUri) { onOpen(p.id) }) }
+        ytFeed.playlists.forEach { p -> add(BoardCard("yt-${p.id}", p.title, null, p.thumbnail, isYouTube = true) { onOpenYt(p.id) }) }
     }
 
     Box(Modifier.fillMaxSize().halftone(colors.accent, Color.Black.copy(alpha = 0.18f))) {
@@ -86,7 +88,7 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, contentPadding: PaddingValues) {
                     },
                 )
             }
-            itemsIndexed(cards, key = { _, p -> p.id }) { index, playlist ->
+            itemsIndexed(cards, key = { _, card -> card.key }) { index, card ->
                 BoxWithConstraints(Modifier.fillMaxWidth().height(RowHeight)) {
                     val leftX = 24.dp + CardSize / 2
                     val rightX = maxWidth - 24.dp - CardSize / 2
@@ -108,9 +110,8 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, contentPadding: PaddingValues) {
                             },
                     )
                     PlaylistCard(
-                        playlist = playlist,
+                        card = card,
                         index = index,
-                        onClick = { onOpen(playlist.id) },
                         modifier = Modifier
                             .align(if (index % 2 == 0) Alignment.CenterStart else Alignment.CenterEnd)
                             .padding(horizontal = 24.dp),
@@ -142,15 +143,25 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, contentPadding: PaddingValues) {
     }
 }
 
+private class BoardCard(
+    val key: String,
+    val name: String,
+    val badge: String?,
+    val cover: String?,
+    val isFavourites: Boolean = false,
+    val isYouTube: Boolean = false,
+    val onClick: () -> Unit,
+)
+
 @Composable
-private fun PlaylistCard(playlist: PlaylistSummary, index: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun PlaylistCard(card: BoardCard, index: Int, modifier: Modifier = Modifier) {
     val colors = LocalPersonaColors.current
     val shape = jaggedCardShape(index + 7)
-    Box(modifier.size(CardSize).rotate(if (index % 2 == 0) -3f else 2.5f).clickable(onClick = onClick)) {
+    Box(modifier.size(CardSize).rotate(if (index % 2 == 0) -3f else 2.5f).clickable(onClick = card.onClick)) {
         // Drop shadow in dark accent, offset like a cut-out pasted on the board.
         Box(Modifier.matchParentSize().offset(8.dp, 8.dp).background(Color(0xFF5A0008), shape))
         Box(Modifier.matchParentSize().background(Color.Black, shape).padding(10.dp)) {
-            if (playlist.id == FAVOURITES_ID && playlist.coverUri == null) {
+            if (card.isFavourites && card.cover == null) {
                 Icon(
                     Icons.Filled.Favorite,
                     contentDescription = null,
@@ -158,7 +169,7 @@ private fun PlaylistCard(playlist: PlaylistSummary, index: Int, onClick: () -> U
                     modifier = Modifier.align(Alignment.Center).size(64.dp),
                 )
             } else {
-                Artwork(playlist.coverUri, Modifier.matchParentSize().padding(top = 18.dp))
+                Artwork(card.cover, Modifier.matchParentSize().padding(top = 18.dp))
             }
         }
         Box(
@@ -168,16 +179,19 @@ private fun PlaylistCard(playlist: PlaylistSummary, index: Int, onClick: () -> U
                 .background(Color.Black)
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
-            Text(playlist.name, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(card.name, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = 6.dp, y = 6.dp)
-                .background(colors.accent)
-                .padding(horizontal = 6.dp),
-        ) {
-            Text("${playlist.songCount}", color = colors.onAccent, style = PersonaType.label)
+        val badge = if (card.isYouTube) "YT" else card.badge
+        if (badge != null) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 6.dp, y = 6.dp)
+                    .background(if (card.isYouTube) Color.White else colors.accent)
+                    .padding(horizontal = 6.dp),
+            ) {
+                Text(badge, color = if (card.isYouTube) Color.Black else colors.onAccent, style = PersonaType.label)
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -36,8 +37,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fsosuke.personamusic.data.AudioQuality
 import com.fsosuke.personamusic.data.PersonaTheme
+import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.CalloutBanner
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.slantShape
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -45,8 +48,10 @@ import com.fsosuke.personamusic.ui.theme.PersonaType
 import com.fsosuke.personamusic.ui.theme.colors
 
 @Composable
-fun CustomizeScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
-    val settings = LocalAppContainer.current.settings
+fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: PaddingValues) {
+    val container = LocalAppContainer.current
+    val settings = container.settings
+    val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
     val colors = LocalPersonaColors.current
     val theme by settings.theme.collectAsStateWithLifecycle()
     val quality by settings.quality.collectAsStateWithLifecycle()
@@ -90,6 +95,40 @@ fun CustomizeScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 CalloutBanner("YouTube Music", Modifier.padding(end = 12.dp, top = 20.dp))
+            }
+        }
+        item {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .background(Color.White, slantShape(0.02f))
+                    .padding(3.dp)
+                    .background(Color.Black, slantShape(0.02f))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val account = ytAccount
+                if (account != null) {
+                    Artwork(account.photoUrl, Modifier.size(48.dp), shape = CircleShape)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(account.name, color = Color.White, style = PersonaType.title)
+                        account.handle?.let { Text(it, color = colors.muted, style = PersonaType.caption) }
+                    }
+                    PersonaButton("Sign out", onClick = container.ytAccounts::signOut, inverted = true)
+                } else {
+                    Column(Modifier.weight(1f)) {
+                        Text("Not connected", color = Color.White, style = PersonaType.title)
+                        Text(
+                            "Sign in for your recommendations and playlists on Home and the playlist board.",
+                            color = colors.muted,
+                            style = PersonaType.caption,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    PersonaButton("Sign in", onClick = onSignIn)
+                }
             }
         }
         item {

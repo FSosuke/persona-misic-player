@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -42,13 +43,18 @@ import com.fsosuke.personamusic.ui.playlist.PlaylistsScreen
 import com.fsosuke.personamusic.ui.settings.CustomizeScreen
 import com.fsosuke.personamusic.ui.stats.StatsScreen
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
+import com.fsosuke.personamusic.ui.youtube.YtLoginScreen
+import com.fsosuke.personamusic.ui.youtube.YtPlaylistScreen
 
 private object Routes {
     const val PLAYER = "player"
     const val STATS = "stats"
     const val CUSTOMIZE = "customize"
     const val PLAYLIST = "playlist/{id}"
+    const val YT_PLAYLIST = "ytplaylist/{id}"
+    const val YT_LOGIN = "ytlogin"
     fun playlist(id: Long) = "playlist/$id"
+    fun ytPlaylist(id: String) = "ytplaylist/${Uri.encode(id)}"
 }
 
 @Composable
@@ -61,9 +67,9 @@ fun PersonaMusicApp() {
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val position by container.player.positionMs.collectAsStateWithLifecycle()
 
-    val showChrome = route != Routes.PLAYER
+    val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
-        ?: if (route == Routes.PLAYLIST) Tab.Playlists else null
+        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST) Tab.Playlists else null
 
     var chromeHeightPx by remember { mutableIntStateOf(0) }
     val chromeHeight = with(LocalDensity.current) { chromeHeightPx.toDp() }
@@ -85,11 +91,20 @@ fun PersonaMusicApp() {
             exitTransition = { fadeOut(tween(120)) },
         ) {
             composable(Tab.Home.route) {
-                HomeScreen(onOpenSettings = { nav.navigate(Routes.CUSTOMIZE) }, contentPadding = padding)
+                HomeScreen(
+                    onOpenSettings = { nav.navigate(Routes.CUSTOMIZE) },
+                    onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
+                    onSignIn = { nav.navigate(Routes.YT_LOGIN) },
+                    contentPadding = padding,
+                )
             }
             composable(Tab.Library.route) { LibraryScreen(contentPadding = padding) }
             composable(Tab.Playlists.route) {
-                PlaylistsScreen(onOpen = { nav.navigate(Routes.playlist(it)) }, contentPadding = padding)
+                PlaylistsScreen(
+                    onOpen = { nav.navigate(Routes.playlist(it)) },
+                    onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
+                    contentPadding = padding,
+                )
             }
             composable(Routes.PLAYLIST, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 PlaylistDetailScreen(
@@ -110,8 +125,22 @@ fun PersonaMusicApp() {
                     onOpenCustomize = { nav.navigate(Routes.CUSTOMIZE) },
                 )
             }
+            composable(Routes.YT_PLAYLIST, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                YtPlaylistScreen(
+                    playlistId = entry.arguments?.getString("id").orEmpty(),
+                    onBack = { nav.popBackStack() },
+                    contentPadding = padding,
+                )
+            }
+            composable(Routes.YT_LOGIN) {
+                YtLoginScreen(onDone = { nav.popBackStack() }, onBack = { nav.popBackStack() })
+            }
             composable(Routes.STATS) { StatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
-            composable(Routes.CUSTOMIZE) { CustomizeScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
+            composable(Routes.CUSTOMIZE) { CustomizeScreen(
+                    onBack = { nav.popBackStack() },
+                    onSignIn = { nav.navigate(Routes.YT_LOGIN) },
+                    contentPadding = padding,
+                ) }
         }
 
         AnimatedVisibility(

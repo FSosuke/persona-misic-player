@@ -6,7 +6,10 @@ import com.fsosuke.personamusic.data.AppSettings
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.playback.PlayerConnection
+import com.fsosuke.personamusic.youtube.InnerTube
 import com.fsosuke.personamusic.youtube.SponsorBlock
+import com.fsosuke.personamusic.youtube.YtAccountManager
+import com.fsosuke.personamusic.youtube.YtMusicLibrary
 import com.fsosuke.personamusic.youtube.YouTubeMusic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,5 +30,8 @@ class AppContainer(context: Context) {
     val repository = MusicRepository(database.musicDao(), LocalMusicScanner(context))
     val youTube = YouTubeMusic(httpClient, settings)
     val sponsorBlock = SponsorBlock(httpClient)
+    val innerTube = InnerTube(httpClient, context)
+    val ytAccounts = YtAccountManager(context, innerTube)
+    val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, appScope)
     val player = PlayerConnection(context)
 }

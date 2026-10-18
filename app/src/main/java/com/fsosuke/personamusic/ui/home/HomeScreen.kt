@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import com.fsosuke.personamusic.ui.components.CalloutBanner
 import com.fsosuke.personamusic.ui.components.DashedSectionTitle
 import com.fsosuke.personamusic.ui.components.EmptyState
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.PersonaSearchField
 import com.fsosuke.personamusic.ui.components.SongRow
@@ -56,9 +58,15 @@ import com.fsosuke.personamusic.ui.components.jaggedCardShape
 import com.fsosuke.personamusic.ui.components.starPattern
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
+import com.fsosuke.personamusic.ui.youtube.YtShelf
 
 @Composable
-fun HomeScreen(onOpenSettings: () -> Unit, contentPadding: PaddingValues) {
+fun HomeScreen(
+    onOpenSettings: () -> Unit,
+    onOpenYtPlaylist: (String) -> Unit,
+    onSignIn: () -> Unit,
+    contentPadding: PaddingValues,
+) {
     val container = LocalAppContainer.current
     val vm: HomeViewModel = viewModel { HomeViewModel(container.repository, container.youTube) }
     val query by vm.query.collectAsStateWithLifecycle()
@@ -69,6 +77,10 @@ fun HomeScreen(onOpenSettings: () -> Unit, contentPadding: PaddingValues) {
     val songLog by vm.songLog.collectAsStateWithLifecycle()
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val currentId = playerState.current?.id
+    val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
+    val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
+
+    LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
 
     fun play(songs: List<Song>, index: Int) {
         vm.remember(songs)
@@ -90,7 +102,41 @@ fun HomeScreen(onOpenSettings: () -> Unit, contentPadding: PaddingValues) {
         }
 
         if (query.isBlank()) {
-            if (recent.isEmpty()) {
+            if (ytAccount != null) {
+                if (ytFeed.home.isEmpty() && ytFeed.loading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = LocalPersonaColors.current.accent)
+                        }
+                    }
+                }
+                ytFeed.error?.let { error ->
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "YouTube Music: $error",
+                                color = LocalPersonaColors.current.muted,
+                                style = PersonaType.caption,
+                                modifier = Modifier.weight(1f),
+                            )
+                            PersonaButton("Retry", onClick = { container.ytLibrary.refresh(force = true) })
+                        }
+                    }
+                }
+                itemsIndexed(ytFeed.home, key = { i, shelf -> "shelf-$i-${shelf.title}" }) { i, shelf ->
+                    YtShelf(
+                        shelf = shelf,
+                        index = i,
+                        currentSongId = currentId,
+                        onPlay = { songs, index -> play(songs, index) },
+                        onOpenCollection = onOpenYtPlaylist,
+                    )
+                }
+            }
+            if (recent.isEmpty() && ytAccount == null) {
                 item {
                     EmptyState(
                         title = "Take your time",
@@ -106,6 +152,13 @@ fun HomeScreen(onOpenSettings: () -> Unit, contentPadding: PaddingValues) {
             if (mostPlayed.isNotEmpty()) {
                 item { MostPlayedSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
                 item { SpeedDialSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
+            }
+            if (ytAccount == null) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        PersonaButton("Connect YouTube Music", onClick = onSignIn, inverted = true)
+                    }
+                }
             }
         } else {
             when (val result = online) {
