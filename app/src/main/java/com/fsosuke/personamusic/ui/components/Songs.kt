@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
@@ -115,13 +116,7 @@ fun SongRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                song.artist,
-                color = colors.muted,
-                style = PersonaType.caption,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            ArtistText(song.artist, color = colors.muted, style = PersonaType.caption)
         }
         Text(formatDuration(song.durationMs), color = colors.muted, style = PersonaType.caption)
         SongMenuButton(song, extraMenu = extraMenu)
@@ -142,6 +137,7 @@ fun SongMenuButton(
     var expanded by remember { mutableStateOf(false) }
     var addToPlaylist by remember { mutableStateOf(false) }
     val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
+    val openArtist = LocalOpenArtist.current
 
     Box(modifier) {
         IconButton(onClick = { expanded = true }) {
@@ -170,6 +166,12 @@ fun SongMenuButton(
             MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
                 expanded = false
                 addToPlaylist = true
+            }
+            if (isRealArtist(song.artist)) {
+                MenuEntry("Go to artist", Icons.Filled.Person) {
+                    expanded = false
+                    openArtist(primaryArtist(song.artist), null)
+                }
             }
             if (song.source == SongSource.YOUTUBE) {
                 MenuEntry("Share", Icons.Filled.Share) {
@@ -285,7 +287,7 @@ fun TopResultCard(song: Song, onPlay: () -> Unit, modifier: Modifier = Modifier)
             Column(Modifier.weight(1f)) {
                 Text(song.title, color = colors.accent, style = PersonaType.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.size(6.dp))
-                Text(song.artist, color = colors.muted, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                ArtistText(song.artist, color = colors.muted, style = PersonaType.body)
             }
             IconButton(onClick = { scope.launch { container.repository.setLiked(song, !liked) } }) {
                 Icon(

@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import com.fsosuke.personamusic.data.SongSource
 import com.fsosuke.personamusic.ui.components.AddToPlaylistDialog
+import com.fsosuke.personamusic.ui.components.ArtistText
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.Chunky
 import com.fsosuke.personamusic.ui.components.ChunkyIcon
@@ -177,7 +178,7 @@ fun NowPlayingScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(song.title, color = Color.White, style = PersonaType.title.copy(fontSize = 21.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(song.artist, color = Color(0xFFBDBDBD), style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    ArtistText(song.artist, color = Color(0xFFBDBDBD), style = PersonaType.body)
                 }
                 ChunkyIcon(
                     if (liked) Chunky.HeartFilled else Chunky.Heart,
@@ -212,16 +213,39 @@ fun NowPlayingScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        ChunkyIcon(Chunky.Shuffle, size = 40.dp, fill = if (state.shuffle) colors.accent else Color.White, onClick = player::toggleShuffle)
+                        ModeButton(
+                            label = if (state.shuffle) "ON" else "OFF",
+                            active = state.shuffle,
+                        ) {
+                            ChunkyIcon(
+                                Chunky.Shuffle,
+                                size = 40.dp,
+                                fill = if (state.shuffle) colors.accent else Color(0xFFCFCFCF),
+                                onClick = player::toggleShuffle,
+                            )
+                        }
                         ChunkyIcon(Chunky.Previous, size = 46.dp, onClick = player::previous)
                         ChunkyIcon(if (state.isPlaying) Chunky.Pause else Chunky.Play, size = 64.dp, onClick = player::togglePlay)
                         ChunkyIcon(Chunky.Next, size = 46.dp, onClick = player::next)
-                        ChunkyIcon(
-                            if (state.repeatMode == Player.REPEAT_MODE_ONE) Chunky.RepeatOne else Chunky.Repeat,
-                            size = 40.dp,
-                            fill = if (state.repeatMode == Player.REPEAT_MODE_OFF) Color.White else colors.accent,
-                            onClick = player::cycleRepeat,
-                        )
+                        ModeButton(
+                            label = when (state.repeatMode) {
+                                Player.REPEAT_MODE_ONE -> "ONE"
+                                Player.REPEAT_MODE_ALL -> "ALL"
+                                else -> "OFF"
+                            },
+                            active = state.repeatMode != Player.REPEAT_MODE_OFF,
+                        ) {
+                            ChunkyIcon(
+                                if (state.repeatMode == Player.REPEAT_MODE_ONE) Chunky.RepeatOne else Chunky.Repeat,
+                                size = 40.dp,
+                                fill = when (state.repeatMode) {
+                                    Player.REPEAT_MODE_OFF -> Color(0xFFCFCFCF)
+                                    Player.REPEAT_MODE_ALL -> colors.accent
+                                    else -> colors.highlight
+                                },
+                                onClick = player::cycleRepeat,
+                            )
+                        }
                     }
                 }
             }
@@ -273,6 +297,24 @@ fun NowPlayingScreen(
 
     if (addToPlaylist && song != null) {
         AddToPlaylistDialog(song, onDismiss = { addToPlaylist = false })
+    }
+}
+
+/** A mode toggle (shuffle / repeat) with its current state spelled out underneath. */
+@Composable
+private fun ModeButton(label: String, active: Boolean, icon: @Composable () -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        icon()
+        Box(
+            Modifier
+                .offset(y = (-2).dp)
+                .rotate(-6f)
+                .background(if (active) colors.accent else Color.Black)
+                .padding(horizontal = 5.dp),
+        ) {
+            Text(label, color = if (active) colors.onAccent else Color(0xFFBDBDBD), style = PersonaType.label.copy(fontSize = 11.sp))
+        }
     }
 }
 

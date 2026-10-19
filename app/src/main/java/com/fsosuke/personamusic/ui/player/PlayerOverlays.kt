@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fsosuke.personamusic.data.Lyrics
 import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.ui.components.ArtistText
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.Chunky
 import com.fsosuke.personamusic.ui.components.ChunkyIcon
@@ -176,7 +177,7 @@ fun SongStatsOverlay(visible: Boolean, song: Song, onClose: () -> Unit, onAllSta
                     Spacer(Modifier.width(18.dp))
                     Column {
                         Text(song.title, color = Color.White, style = PersonaType.title.copy(fontSize = 20.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(song.artist, color = Color(0xFFBBBBBB), style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        ArtistText(song.artist, color = Color(0xFFBBBBBB), style = PersonaType.body)
                     }
                 }
                 Spacer(Modifier.height(6.dp))

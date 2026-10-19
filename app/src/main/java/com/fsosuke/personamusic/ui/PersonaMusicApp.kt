@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -31,7 +32,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.fsosuke.personamusic.ui.artist.ArtistScreen
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.LocalOpenArtist
 import com.fsosuke.personamusic.ui.components.MiniPlayer
 import com.fsosuke.personamusic.ui.components.PersonaBottomBar
 import com.fsosuke.personamusic.ui.components.Tab
@@ -50,6 +53,8 @@ import com.fsosuke.personamusic.ui.youtube.YtPlaylistScreen
 private object Routes {
     const val PLAYER = "player"
     const val QUEUE = "queue"
+    const val ARTIST = "artist?name={name}&id={id}"
+    fun artist(name: String, id: String?) = "artist?name=${Uri.encode(name)}" + (id?.let { "&id=${Uri.encode(it)}" } ?: "")
     const val STATS = "stats"
     const val CUSTOMIZE = "customize"
     const val PLAYLIST = "playlist/{id}"
@@ -85,6 +90,9 @@ fun PersonaMusicApp() {
         }
     }
 
+    val openArtist: (String, String?) -> Unit = { name, id -> nav.navigate(Routes.artist(name, id)) }
+
+    CompositionLocalProvider(LocalOpenArtist provides openArtist) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         NavHost(
             navController = nav,
@@ -143,6 +151,21 @@ fun PersonaMusicApp() {
                 enterTransition = { slideInVertically(tween(240)) { it } },
                 popExitTransition = { slideOutVertically(tween(200)) { it } },
             ) { QueueScreen(onClose = { nav.popBackStack() }) }
+            composable(
+                Routes.ARTIST,
+                arguments = listOf(
+                    navArgument("name") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { entry ->
+                ArtistScreen(
+                    name = entry.arguments?.getString("name").orEmpty(),
+                    browseId = entry.arguments?.getString("id"),
+                    onBack = { nav.popBackStack() },
+                    onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
+                    contentPadding = padding,
+                )
+            }
             composable(Routes.STATS) { StatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CUSTOMIZE) { CustomizeScreen(
                     onBack = { nav.popBackStack() },
@@ -168,5 +191,6 @@ fun PersonaMusicApp() {
                 PersonaBottomBar(selected = selectedTab, onSelect = ::selectTab)
             }
         }
+    }
     }
 }

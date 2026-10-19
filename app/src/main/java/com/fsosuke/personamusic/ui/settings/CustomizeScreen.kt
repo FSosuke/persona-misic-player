@@ -41,6 +41,7 @@ import com.fsosuke.personamusic.ui.components.DuotoneImage
 import com.fsosuke.personamusic.ui.components.importBackground
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -236,6 +237,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                 )
             }
         }
+        item { Watermark() }
         item { Spacer(Modifier.height(24.dp)) }
     }
 }
@@ -257,5 +259,35 @@ private fun BackgroundRow(label: String, path: String?, tint: Color?, onPick: ()
             )
         }
         PersonaButton(if (path == null) "Pick" else "Change", onClick = onPick)
+    }
+}
+
+/** The author's calling-card signature at the bottom of the settings. */
+@Composable
+private fun Watermark() {
+    val context = LocalContext.current
+    val colors = LocalPersonaColors.current
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+    }
+    Box(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 8.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier
+                .rotate(-4f)
+                .alpha(0.85f)
+                .background(Color.White)
+                .padding(3.dp)
+                .background(Color.Black)
+                .padding(horizontal = 22.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("crafted by", color = colors.muted, style = PersonaType.caption.copy(fontSize = 11.sp))
+            Text("FSosuke", color = Color.White, style = PersonaType.graffiti.copy(fontSize = 30.sp))
+            Text(
+                "PERSONA MUSIC $version",
+                color = colors.accent,
+                style = PersonaType.label.copy(fontSize = 11.sp, letterSpacing = 2.sp),
+            )
+        }
     }
 }

@@ -24,7 +24,16 @@ data class YtPlaylist(
 sealed interface YtItem {
     data class SongItem(val song: Song) : YtItem
     data class Collection(val playlist: YtPlaylist) : YtItem
+    data class ArtistItem(val name: String, val browseId: String, val thumbnail: String?) : YtItem
 }
+
+data class YtArtistPage(
+    val browseId: String,
+    val name: String,
+    val thumbnail: String?,
+    val songs: List<Song>,
+    val shelves: List<HomeShelf>,
+)
 
 data class HomeShelf(val title: String, val items: List<YtItem>)
 
@@ -83,6 +92,30 @@ class YtMusicLibrary(
     suspend fun playlist(id: String): YtPlaylistPage {
         val cookie = accounts.cookie
         return if (id.startsWith(WATCH_PREFIX)) loadMix(id.removePrefix(WATCH_PREFIX), cookie) else loadBrowsePlaylist(id, cookie)
+    }
+
+    /** Artist page by channel id, or found via search when only the name is known. */
+    suspend fun artist(name: String, browseId: String?): YtArtistPage? {
+        val cookie = accounts.cookie
+        val id = browseId ?: findArtistId(name, cookie) ?: return null
+        val json = api.post("browse", cookie, JSONObject().put("browseId", id))
+        val header = findFirst(json, "musicImmersiveHeaderRenderer")
+            ?: findFirst(json, "musicVisualHeaderRenderer")
+            ?: findFirst(json, "musicResponsiveHeaderRenderer")
+        val title = header.obj("title").runsText() ?: name
+        val thumbnail = header?.let { bestThumbnail(findThumbnails(it)) }
+        val songs = findFirst(json, "musicShelfRenderer")
+            ?.let { shelf -> findAll(shelf, "musicResponsiveListItemRenderer").mapNotNull { parseSong(it, null, title) } }
+            .orEmpty()
+        return YtArtistPage(id, title, thumbnail, songs.distinctBy { it.id }, parseShelves(json))
+    }
+
+    private suspend fun findArtistId(name: String, cookie: String?): String? {
+        val json = api.post("search", cookie, JSONObject().put("query", name))
+        val artists = findAll(json, "browseEndpoint").filter {
+            it.str("browseEndpointContextSupportedConfigs", "browseEndpointContextMusicConfig", "pageType") == ARTIST
+        }
+        return artists.firstOrNull()?.str("browseId")
     }
 
     // --- Home ------------------------------------------------------------------------------
@@ -211,6 +244,7 @@ class YtMusicLibrary(
         val browseId = browse.str("browseId") ?: return null
         return when (browse.str("browseEndpointContextSupportedConfigs", "browseEndpointContextMusicConfig", "pageType")) {
             PLAYLIST, ALBUM, "MUSIC_PAGE_TYPE_AUDIOBOOK" -> YtItem.Collection(YtPlaylist(browseId, title, subtitle, thumbnail))
+            ARTIST -> YtItem.ArtistItem(title, browseId, thumbnail)
             else -> null
         }
     }

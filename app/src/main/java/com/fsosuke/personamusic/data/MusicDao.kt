@@ -31,6 +31,18 @@ interface MusicDao {
     )
     fun searchLocal(query: String): Flow<List<Song>>
 
+    @Query(
+        "SELECT * FROM songs WHERE source = 'LOCAL' AND artist LIKE '%' || :artist || '%' " +
+            "ORDER BY album COLLATE NOCASE, title COLLATE NOCASE"
+    )
+    fun localSongsByArtist(artist: String): Flow<List<Song>>
+
+    @Query(
+        "SELECT COUNT(*) FROM play_events e JOIN songs s ON s.id = e.songId " +
+            "WHERE s.artist LIKE '%' || :artist || '%'"
+    )
+    fun artistPlays(artist: String): Flow<Int>
+
     // --- Likes -----------------------------------------------------------------------------
 
     @Query("SELECT EXISTS(SELECT 1 FROM liked_songs WHERE songId = :songId)")

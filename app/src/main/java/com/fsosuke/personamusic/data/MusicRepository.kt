@@ -17,6 +17,8 @@ class MusicRepository(
     fun playlist(id: Long) = dao.playlist(id)
     fun playlistSongs(id: Long) = dao.playlistSongs(id)
     fun playCount(songId: String) = dao.playCount(songId)
+    fun localSongsByArtist(artist: String) = dao.localSongsByArtist(artist)
+    fun artistPlays(artist: String) = dao.artistPlays(artist)
 
     val totalPlays = dao.totalPlays()
     val totalListenedMs = dao.totalListenedMs()

@@ -100,8 +100,16 @@ fun ChunkyIcon(
                 drawPath(loop, fill, style = Stroke(2.6f * u, cap = StrokeCap.Round))
                 chunk(p(14f, 2.5f, 21f, 6.5f, 14.5f, 10.5f), p(10f, 13.5f, 3f, 17.5f, 9.5f, 21.5f))
                 if (icon == Chunky.RepeatOne) {
-                    val layout = measurer.measure("1", TextStyle(fontFamily = PersonaFonts.bangers, fontSize = (9f * u).toSp()))
-                    drawText(layout, color = fill, topLeft = Offset(10f * u, 6.5f * u))
+                    // Big "1" badge so repeat-one never looks like repeat-all.
+                    val badge = Offset(17.5f * u, 17.5f * u)
+                    drawCircle(outline, 7.2f * u, badge)
+                    drawCircle(Color.White, 6f * u, badge)
+                    val layout = measurer.measure("1", TextStyle(fontFamily = PersonaFonts.archivoBlack, fontSize = (9.5f * u).toSp()))
+                    drawText(
+                        layout,
+                        color = Color.Black,
+                        topLeft = Offset(badge.x - layout.size.width / 2f, badge.y - layout.size.height / 2f),
+                    )
                 }
             }
             Chunky.Shuffle -> {

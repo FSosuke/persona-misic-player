@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.CalloutBanner
+import com.fsosuke.personamusic.ui.components.LocalOpenArtist
 import com.fsosuke.personamusic.ui.components.jaggedCardShape
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
@@ -48,6 +50,7 @@ fun YtShelf(
     val colors = LocalPersonaColors.current
     val songs = shelf.items.filterIsInstance<YtItem.SongItem>().map { it.song }
     val pointLeft = index % 2 == 1
+    val openArtist = LocalOpenArtist.current
     Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = if (pointLeft) Alignment.CenterStart else Alignment.CenterEnd) {
             CalloutBanner(shelf.title, Modifier.padding(horizontal = 12.dp), pointLeft = pointLeft)
@@ -70,6 +73,16 @@ fun YtShelf(
                             onClick = { onPlay(songs, songs.indexOf(item.song).coerceAtLeast(0)) },
                         )
                     }
+                    is YtItem.ArtistItem -> YtCard(
+                        title = item.name,
+                        subtitle = "Artist",
+                        artwork = item.thumbnail,
+                        seed = i,
+                        highlighted = false,
+                        isCollection = false,
+                        round = true,
+                        onClick = { openArtist(item.name, item.browseId) },
+                    )
                     is YtItem.Collection -> YtCard(
                         title = item.playlist.title,
                         subtitle = item.playlist.subtitle,
@@ -93,10 +106,11 @@ private fun YtCard(
     seed: Int,
     highlighted: Boolean,
     isCollection: Boolean,
+    round: Boolean = false,
     onClick: () -> Unit,
 ) {
     val colors = LocalPersonaColors.current
-    val shape = jaggedCardShape(seed + 3)
+    val shape = if (round) CircleShape else jaggedCardShape(seed + 3)
     Column(Modifier.width(150.dp).clickable(onClick = onClick)) {
         Box {
             Artwork(
