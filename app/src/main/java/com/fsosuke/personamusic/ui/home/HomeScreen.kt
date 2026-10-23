@@ -67,6 +67,7 @@ import com.fsosuke.personamusic.ui.components.PersonaSearchField
 import com.fsosuke.personamusic.ui.components.SongRow
 import com.fsosuke.personamusic.ui.components.TopResultCard
 import com.fsosuke.personamusic.ui.components.UpdateBanner
+import com.fsosuke.personamusic.ui.components.WithSongMenu
 import com.fsosuke.personamusic.ui.components.jaggedCardShape
 import com.fsosuke.personamusic.ui.components.starPattern
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -241,7 +242,8 @@ private fun RecentSection(songs: List<Song>, currentId: String?, isPlaying: Bool
         ) {
             itemsIndexed(songs, key = { _, s -> s.id }) { index, song ->
                 val isCurrent = song.id == currentId
-                Column(Modifier.width(180.dp).clickable { onPlay(index) }) {
+                WithSongMenu(song, onClick = { onPlay(index) }) { clickModifier ->
+                Column(Modifier.width(180.dp).then(clickModifier)) {
                     Box {
                         Artwork(
                             song.artworkUri,
@@ -276,6 +278,7 @@ private fun RecentSection(songs: List<Song>, currentId: String?, isPlaying: Bool
                     )
                     Text(song.artist, color = colors.muted, style = PersonaType.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                }
             }
         }
     }
@@ -291,7 +294,8 @@ private fun MostPlayedSection(entries: List<SongWithPlays>, onPlay: (Int) -> Uni
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             itemsIndexed(entries, key = { _, e -> e.song.id }) { index, entry ->
-                Column(Modifier.width(130.dp).clickable { onPlay(index) }) {
+                WithSongMenu(entry.song, onClick = { onPlay(index) }) { clickModifier ->
+                Column(Modifier.width(130.dp).then(clickModifier)) {
                     Box {
                         Artwork(entry.song.artworkUri, Modifier.rotate(-2f).size(130.dp).border(2.dp, Color.White))
                         Box(
@@ -307,6 +311,7 @@ private fun MostPlayedSection(entries: List<SongWithPlays>, onPlay: (Int) -> Uni
                     Spacer(Modifier.height(8.dp))
                     Text(entry.song.title, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("${entry.plays}× played", color = colors.muted, style = PersonaType.caption)
+                }
                 }
             }
         }

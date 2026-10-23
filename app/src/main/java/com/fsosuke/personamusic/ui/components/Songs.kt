@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,7 +134,100 @@ fun SongRow(
     }
 }
 
-/** Overflow menu with queue/like/playlist/share actions, usable on any song. */
+/** Song actions: queue, radio, favourite, playlist, download, artist, share. */
+@Composable
+fun SongMenu(
+    song: Song,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    extraMenu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
+) {
+    val container = LocalAppContainer.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var addToPlaylist by remember { mutableStateOf(false) }
+    val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
+    val openArtist = LocalOpenArtist.current
+    val download = rememberDownloadAction()
+    val savedDownloads by container.downloads.downloaded.collectAsState()
+
+    Box {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismiss,
+            containerColor = Color.Black,
+            modifier = Modifier.border(2.dp, Color.White),
+        ) {
+            MenuEntry("Play next", Icons.Filled.SkipNext) {
+                onDismiss()
+                scope.launch { container.repository.remember(listOf(song)) }
+                container.player.playNext(song)
+            }
+            MenuEntry("Start radio", Icons.Filled.Radio) {
+                onDismiss()
+                startRadio(container, context, song)
+            }
+            MenuEntry("Add to queue", Icons.AutoMirrored.Filled.QueueMusic) {
+                onDismiss()
+                scope.launch { container.repository.remember(listOf(song)) }
+                container.player.addToQueue(song)
+            }
+            MenuEntry(if (liked) "Remove from favourites" else "Add to favourites", if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder) {
+                onDismiss()
+                scope.launch { container.setLiked(song, !liked) }
+            }
+            MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
+                onDismiss()
+                addToPlaylist = true
+            }
+            if (song.source == SongSource.YOUTUBE) {
+                if (song.id in savedDownloads) {
+                    MenuEntry("Remove download", Icons.Filled.DeleteOutline) {
+                        onDismiss()
+                        container.appScope.launch { container.downloads.remove(song.id) }
+                    }
+                } else {
+                    MenuEntry("Download", Icons.Filled.Download) {
+                        onDismiss()
+                        download(listOf(song))
+                    }
+                }
+            }
+            if (isRealArtist(song.artist)) {
+                MenuEntry("Go to artist", Icons.Filled.Person) {
+                    onDismiss()
+                    openArtist(primaryArtist(song.artist), null)
+                }
+            }
+            if (song.source == SongSource.YOUTUBE) {
+                MenuEntry("Share", Icons.Filled.Share) {
+                    onDismiss()
+                    shareSong(context, song)
+                }
+            }
+            extraMenu?.invoke(onDismiss)
+        }
+    }
+    if (addToPlaylist) {
+        AddToPlaylistDialog(song, onDismiss = { addToPlaylist = false })
+    }
+}
+
+/**
+ * Makes a song card tappable (play) and long-pressable (song menu with download, radio, …).
+ * [content] must apply the given modifier to its clickable root.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun WithSongMenu(song: Song, onClick: () -> Unit, content: @Composable (Modifier) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        content(Modifier.combinedClickable(onClick = onClick, onLongClick = { expanded = true }))
+        SongMenu(song, expanded, onDismiss = { expanded = false })
+    }
+}
+
+/** Overflow (⋮) button opening the [SongMenu]. */
 @Composable
 fun SongMenuButton(
     song: Song,
@@ -140,78 +235,12 @@ fun SongMenuButton(
     tint: Color = Color(0xFF9A9A9A),
     extraMenu: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
 ) {
-    val container = LocalAppContainer.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
-    var addToPlaylist by remember { mutableStateOf(false) }
-    val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
-    val openArtist = LocalOpenArtist.current
-    val download = rememberDownloadAction()
-    val savedDownloads by container.downloads.downloaded.collectAsState()
-
     Box(modifier) {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = tint)
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            containerColor = Color.Black,
-            modifier = Modifier.border(2.dp, Color.White),
-        ) {
-            MenuEntry("Play next", Icons.Filled.SkipNext) {
-                expanded = false
-                scope.launch { container.repository.remember(listOf(song)) }
-                container.player.playNext(song)
-            }
-            MenuEntry("Start radio", Icons.Filled.Radio) {
-                expanded = false
-                startRadio(container, context, song)
-            }
-            MenuEntry("Add to queue", Icons.AutoMirrored.Filled.QueueMusic) {
-                expanded = false
-                scope.launch { container.repository.remember(listOf(song)) }
-                container.player.addToQueue(song)
-            }
-            MenuEntry(if (liked) "Remove from favourites" else "Add to favourites", if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder) {
-                expanded = false
-                scope.launch { container.setLiked(song, !liked) }
-            }
-            MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
-                expanded = false
-                addToPlaylist = true
-            }
-            if (song.source == SongSource.YOUTUBE) {
-                if (song.id in savedDownloads) {
-                    MenuEntry("Remove download", Icons.Filled.DeleteOutline) {
-                        expanded = false
-                        container.appScope.launch { container.downloads.remove(song.id) }
-                    }
-                } else {
-                    MenuEntry("Download", Icons.Filled.Download) {
-                        expanded = false
-                        download(listOf(song))
-                    }
-                }
-            }
-            if (isRealArtist(song.artist)) {
-                MenuEntry("Go to artist", Icons.Filled.Person) {
-                    expanded = false
-                    openArtist(primaryArtist(song.artist), null)
-                }
-            }
-            if (song.source == SongSource.YOUTUBE) {
-                MenuEntry("Share", Icons.Filled.Share) {
-                    expanded = false
-                    shareSong(context, song)
-                }
-            }
-            extraMenu?.invoke { expanded = false }
-        }
-    }
-    if (addToPlaylist) {
-        AddToPlaylistDialog(song, onDismiss = { addToPlaylist = false })
+        SongMenu(song, expanded, onDismiss = { expanded = false }, extraMenu = extraMenu)
     }
 }
 
@@ -396,6 +425,7 @@ fun TopResultCard(song: Song, onPlay: () -> Unit, modifier: Modifier = Modifier)
                 Spacer(Modifier.size(6.dp))
                 ArtistText(song.artist, color = colors.muted, style = PersonaType.body)
             }
+            SongMenuButton(song, tint = Color(0xFFBBBBBB))
             IconButton(onClick = { scope.launch { container.setLiked(song, !liked) } }) {
                 Icon(
                     if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,

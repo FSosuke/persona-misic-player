@@ -67,6 +67,7 @@ import com.fsosuke.personamusic.ui.components.formatDuration
 import com.fsosuke.personamusic.ui.components.phantomSlashes
 import com.fsosuke.personamusic.ui.components.shareSong
 import com.fsosuke.personamusic.ui.components.startRadio
+import com.fsosuke.personamusic.ui.components.rememberDownloadAction
 import com.fsosuke.personamusic.ui.components.slantShape
 import com.fsosuke.personamusic.ui.components.tornBand
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -97,6 +98,9 @@ fun NowPlayingScreen(
     var dragged by remember { mutableFloatStateOf(0f) }
 
     val song = state.current
+    val download = rememberDownloadAction()
+    val savedDownloads by container.downloads.downloaded.collectAsStateWithLifecycle()
+    val isDownloaded = song != null && song.id in savedDownloads
     val liked by remember(song?.id) { container.repository.isLiked(song?.id ?: "") }
         .collectAsStateWithLifecycle(initialValue = false)
 
@@ -275,6 +279,13 @@ fun NowPlayingScreen(
             entries = listOf(
                 "Playlist" to { overlay = null; addToPlaylist = song != null },
                 "Radio" to { overlay = null; song?.let { startRadio(container, context, it) }; Unit },
+                (if (isDownloaded) "Delete file" else "Download") to {
+                    overlay = null
+                    song?.let {
+                        if (isDownloaded) container.appScope.launch { container.downloads.remove(it.id) } else download(listOf(it))
+                    }
+                    Unit
+                },
                 "Stats" to { overlay = if (song != null) PlayerOverlay.Stats else null },
                 "Customize" to { overlay = null; onOpenCustomize() },
                 "Share" to { overlay = null; song?.let { shareSong(context, it) }; Unit },

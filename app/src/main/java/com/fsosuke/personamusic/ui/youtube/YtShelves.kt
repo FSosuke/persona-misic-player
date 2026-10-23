@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.CalloutBanner
+import com.fsosuke.personamusic.ui.components.WithSongMenu
 import com.fsosuke.personamusic.ui.components.LocalOpenArtist
 import com.fsosuke.personamusic.ui.components.jaggedCardShape
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -63,15 +64,18 @@ fun YtShelf(
                 when (item) {
                     is YtItem.SongItem -> {
                         val isCurrent = item.song.id == currentSongId
-                        YtCard(
-                            title = item.song.title,
-                            subtitle = item.song.artist,
-                            artwork = item.song.artworkUri,
-                            seed = i,
-                            highlighted = isCurrent,
-                            isCollection = false,
-                            onClick = { onPlay(songs, songs.indexOf(item.song).coerceAtLeast(0)) },
-                        )
+                        WithSongMenu(item.song, onClick = { onPlay(songs, songs.indexOf(item.song).coerceAtLeast(0)) }) { clickModifier ->
+                            YtCard(
+                                title = item.song.title,
+                                subtitle = item.song.artist,
+                                artwork = item.song.artworkUri,
+                                seed = i,
+                                highlighted = isCurrent,
+                                isCollection = false,
+                                clickModifier = clickModifier,
+                                onClick = {},
+                            )
+                        }
                     }
                     is YtItem.ArtistItem -> YtCard(
                         title = item.name,
@@ -107,11 +111,12 @@ private fun YtCard(
     highlighted: Boolean,
     isCollection: Boolean,
     round: Boolean = false,
+    clickModifier: Modifier? = null,
     onClick: () -> Unit,
 ) {
     val colors = LocalPersonaColors.current
     val shape = if (round) CircleShape else jaggedCardShape(seed + 3)
-    Column(Modifier.width(150.dp).clickable(onClick = onClick)) {
+    Column(Modifier.width(150.dp).then(clickModifier ?: Modifier.clickable(onClick = onClick))) {
         Box {
             Artwork(
                 artwork,
