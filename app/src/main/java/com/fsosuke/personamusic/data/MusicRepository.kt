@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.data
 
+import kotlinx.coroutines.flow.map
+
 class MusicRepository(
     private val dao: MusicDao,
     private val scanner: LocalMusicScanner,
@@ -68,4 +70,15 @@ class MusicRepository(
     suspend fun setListened(eventId: Long, listenedMs: Long) = dao.updateListened(eventId, listenedMs)
 
     fun songStats(songId: String) = dao.songStats(songId)
+
+    val confidants = dao.artistPlayCounts().map { Confidants.fromCounts(it) }
+
+    /** Rank-up check right after a play of [song] was logged. */
+    suspend fun rankUpAfterPlay(song: Song): RankUp? {
+        val artist = primaryArtist(song.artist)
+        if (!isRealArtist(artist)) return null
+        val confidant = Confidants.fromCounts(dao.artistPlayCountsNow()).firstOrNull { it.artist == artist } ?: return null
+        val previous = Confidants.rankFor(confidant.plays - 1)
+        return if (confidant.rank > previous) RankUp(confidant, previous) else null
+    }
 }

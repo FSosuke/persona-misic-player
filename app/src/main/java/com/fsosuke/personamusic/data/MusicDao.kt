@@ -193,6 +193,16 @@ interface MusicDao {
     )
     fun topArtists(limit: Int): Flow<List<ArtistPlays>>
 
+    @Query(
+        "SELECT s.artist AS name, COUNT(*) AS plays FROM play_events e JOIN songs s ON s.id = e.songId GROUP BY s.artist"
+    )
+    fun artistPlayCounts(): Flow<List<ArtistPlays>>
+
+    @Query(
+        "SELECT s.artist AS name, COUNT(*) AS plays FROM play_events e JOIN songs s ON s.id = e.songId GROUP BY s.artist"
+    )
+    suspend fun artistPlayCountsNow(): List<ArtistPlays>
+
     @Query("SELECT COUNT(*) FROM play_events WHERE songId = :songId")
     fun playCount(songId: String): Flow<Int>
 }

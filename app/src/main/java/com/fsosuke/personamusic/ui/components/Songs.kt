@@ -69,6 +69,8 @@ import coil.compose.AsyncImage
 import com.fsosuke.personamusic.AppContainer
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.data.SongSource
+import com.fsosuke.personamusic.data.isRealArtist
+import com.fsosuke.personamusic.data.primaryArtist
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
 import android.widget.Toast

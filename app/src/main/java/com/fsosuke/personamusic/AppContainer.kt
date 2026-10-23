@@ -13,6 +13,9 @@ import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.download.DownloadManager
 import com.fsosuke.personamusic.playback.PlayerConnection
+import com.fsosuke.personamusic.playback.SleepTimer
+import com.fsosuke.personamusic.data.RankUp
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.fsosuke.personamusic.update.UpdateManager
 import com.fsosuke.personamusic.youtube.InnerTube
 import com.fsosuke.personamusic.youtube.SponsorBlock
@@ -54,6 +57,10 @@ class AppContainer(context: Context) {
     val ytAccounts = YtAccountManager(context, innerTube)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)
     val player = PlayerConnection(context)
+    val sleepTimer = SleepTimer()
+
+    /** Latest confidant rank-up, shown as an overlay until dismissed (survives the app being closed). */
+    val pendingRankUp = MutableStateFlow<RankUp?>(null)
     val backup = BackupManager(context, database, settings)
     val searchHistory = SearchHistory(context)
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)

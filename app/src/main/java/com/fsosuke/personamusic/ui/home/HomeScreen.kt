@@ -51,7 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fsosuke.personamusic.data.Confidant
 import com.fsosuke.personamusic.data.LoggedPlay
+import com.fsosuke.personamusic.ui.confidant.ArcanaCard
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.data.SongWithPlays
 import com.fsosuke.personamusic.ui.components.Artwork
@@ -79,6 +81,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenYtPlaylist: (String) -> Unit,
     onSignIn: () -> Unit,
+    onOpenConfidants: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     val container = LocalAppContainer.current
@@ -97,6 +100,7 @@ fun HomeScreen(
     val recent by vm.recent.collectAsStateWithLifecycle()
     val mostPlayed by vm.mostPlayed.collectAsStateWithLifecycle()
     val songLog by vm.songLog.collectAsStateWithLifecycle()
+    val confidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val currentId = playerState.current?.id
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
@@ -205,6 +209,9 @@ fun HomeScreen(
             }
             if (mostPlayed.isNotEmpty()) {
                 item { MostPlayedSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
+            }
+            if (confidants.isNotEmpty()) {
+                item { ConfidantsSection(confidants.take(8), onAll = onOpenConfidants) }
             }
             if (songLog.isNotEmpty() || mostPlayed.isNotEmpty()) {
                 item {
@@ -416,5 +423,43 @@ private fun SpeedDialSection(entries: List<SongWithPlays>, onPlay: (Int) -> Unit
             }
         }
         Spacer(Modifier.height(4.dp).background(colors.background))
+    }
+}
+
+/** Your strongest bonds, as arcana cards. */
+@Composable
+private fun ConfidantsSection(confidants: List<Confidant>, onAll: () -> Unit) {
+    val colors = LocalPersonaColors.current
+    val openArtist = LocalOpenArtist.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            CalloutBanner("Confidants", Modifier.padding(end = 12.dp))
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            itemsIndexed(confidants, key = { _, c -> c.artist }) { index, confidant ->
+                Column(
+                    Modifier.width(96.dp).clickable { openArtist(confidant.artist, null) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ArcanaCard(confidant.arcana, Modifier.fillMaxWidth().rotate(if (index % 2 == 0) -3f else 3f), textScale = 0.8f)
+                    Spacer(Modifier.height(8.dp))
+                    Text(confidant.artist, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (confidant.isMax) "MAX" else "Rank ${confidant.rank}",
+                        color = colors.accent,
+                        style = PersonaType.label.copy(fontSize = 12.sp),
+                    )
+                }
+            }
+        }
+        Text(
+            "ALL CONFIDANTS →",
+            color = colors.accent,
+            style = PersonaType.label.copy(fontSize = 14.sp),
+            modifier = Modifier.align(Alignment.End).clickable(onClick = onAll).padding(horizontal = 20.dp, vertical = 6.dp),
+        )
     }
 }

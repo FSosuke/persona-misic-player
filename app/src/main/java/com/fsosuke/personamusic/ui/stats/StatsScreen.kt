@@ -37,13 +37,14 @@ import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.CalloutBanner
 import com.fsosuke.personamusic.ui.components.EmptyState
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.slantShape
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
 
 @Composable
-fun StatsScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
+fun StatsScreen(onBack: () -> Unit, onOpenConfidants: () -> Unit, contentPadding: PaddingValues) {
     val repo = LocalAppContainer.current.repository
     val colors = LocalPersonaColors.current
     val totalPlays by repo.totalPlays.collectAsStateWithLifecycle(initialValue = 0)
@@ -73,6 +74,11 @@ fun StatsScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
                 StatCard("Plays", "$totalPlays", Modifier.weight(1f), -3f)
                 StatCard("Hours", "%.1f".format(listenedMs / 3_600_000.0), Modifier.weight(1f), 2f)
                 StatCard("Songs", "$distinct", Modifier.weight(1f), -1.5f)
+            }
+        }
+        item {
+            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+                PersonaButton("Confidants", onClick = onOpenConfidants)
             }
         }
         if (artists.isNotEmpty()) {

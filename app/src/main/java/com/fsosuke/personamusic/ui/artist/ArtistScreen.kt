@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fsosuke.personamusic.data.Confidants
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.DashedSectionTitle
@@ -88,7 +89,8 @@ fun ArtistScreen(
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val page = (online as? ArtistState.Loaded)?.page
     val displayName = page?.name ?: name
-    val rank = (1 + plays / 5).coerceAtMost(10)
+    val confidant = Confidants.of(displayName, plays)
+    val rank = confidant.rank
 
     fun play(songs: List<Song>, index: Int, shuffle: Boolean = false) {
         container.appScope.launch { container.repository.remember(songs) }
@@ -133,7 +135,7 @@ fun ArtistScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
                 ShoutLabel(
-                    "Rank $rank",
+                    if (confidant.isMax) "${confidant.arcana.title} · MAX" else "${confidant.arcana.title} · Rank $rank",
                     Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 60.dp, top = 16.dp),
                     tilt = -6f,
                 )

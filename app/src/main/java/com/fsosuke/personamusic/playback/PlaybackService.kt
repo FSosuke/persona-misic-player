@@ -36,6 +36,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -95,6 +96,8 @@ class PlaybackService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        scope.launch { runSleepTimer(player) }
+
         session = MediaSession.Builder(this, player)
             .setSessionActivity(openApp)
             .setCallback(SessionCallback())
@@ -119,6 +122,27 @@ class PlaybackService : MediaSessionService() {
         session = null
         scope.cancel()
         super.onDestroy()
+    }
+
+    /** Executes the [SleepTimer]: fade out and pause at the deadline, or pause at the song's end. */
+    private suspend fun runSleepTimer(player: ExoPlayer) {
+        container.sleepTimer.mode.collectLatest { mode ->
+            player.pauseAtEndOfMediaItems = mode is SleepTimer.Mode.EndOfSong
+            if (mode !is SleepTimer.Mode.At) {
+                player.volume = 1f
+                return@collectLatest
+            }
+            val untilFade = mode.endsAtElapsed - SystemClock.elapsedRealtime() - FADE_MS
+            if (untilFade > 0) delay(untilFade)
+            val steps = 30
+            for (i in steps downTo 0) {
+                player.volume = i / steps.toFloat()
+                delay(FADE_MS / steps)
+            }
+            player.pause()
+            player.volume = 1f
+            container.sleepTimer.cancel()
+        }
     }
 
     /** Adds the running stretch to the current play event and persists the total. */
@@ -155,7 +179,11 @@ class PlaybackService : MediaSessionService() {
             playingSince = if (player.isPlaying) SystemClock.elapsedRealtime() else null
             historyJob?.cancel()
             mediaItem ?: return
-            currentEvent = scope.async(Dispatchers.IO) { container.repository.logPlay(mediaItem.mediaId) }
+            currentEvent = scope.async(Dispatchers.IO) {
+                container.repository.logPlay(mediaItem.mediaId).also {
+                    container.repository.rankUpAfterPlay(mediaItem.toSong())?.let { container.pendingRankUp.value = it }
+                }
+            }
             maybeExtendQueue()
 
             val videoId = mediaItem.requestMetadata.mediaUri
@@ -172,6 +200,15 @@ class PlaybackService : MediaSessionService() {
                         runCatching { container.ytLibrary.registerPlayback(videoId) }
                     }
                 }
+            }
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            // "End of song" sleep timer fired.
+            if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM &&
+                container.sleepTimer.mode.value is SleepTimer.Mode.EndOfSong
+            ) {
+                container.sleepTimer.cancel()
             }
         }
 
@@ -259,6 +296,7 @@ class PlaybackService : MediaSessionService() {
     private companion object {
         const val MAX_CONSECUTIVE_ERRORS = 3
         const val HISTORY_AFTER_MS = 30_000L
+        const val FADE_MS = 20_000L
         const val AUTOPLAY_THRESHOLD = 2
         const val AUTOPLAY_BATCH = 20
     }

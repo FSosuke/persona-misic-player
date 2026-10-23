@@ -8,16 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import com.fsosuke.personamusic.data.isRealArtist
+import com.fsosuke.personamusic.data.primaryArtist
 
 /** Opens the artist page: (name, optional YouTube Music channel id). Provided by the nav host. */
 val LocalOpenArtist = staticCompositionLocalOf<(String, String?) -> Unit> { { _, _ -> } }
-
-private val separators = Regex("\\s*(,|&|\\bfeat\\.?|\\bft\\.?|\\bx\\b|/)\\s*", RegexOption.IGNORE_CASE)
-
-/** "Lyn, ATLUS Sound Team" → "Lyn". */
-fun primaryArtist(artist: String): String = artist.split(separators).firstOrNull { it.isNotBlank() }?.trim() ?: artist
-
-fun isRealArtist(artist: String) = artist.isNotBlank() && !artist.startsWith("Unknown", ignoreCase = true)
 
 /** Artist name that opens the artist page when tapped. */
 @Composable

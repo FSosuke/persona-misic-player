@@ -33,6 +33,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
+import com.fsosuke.personamusic.ui.confidant.ConfidantsScreen
+import com.fsosuke.personamusic.ui.confidant.RankUpOverlay
 import com.fsosuke.personamusic.ui.download.DownloadsScreen
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.LocalOpenArtist
@@ -55,6 +57,7 @@ private object Routes {
     const val PLAYER = "player"
     const val QUEUE = "queue"
     const val DOWNLOADS = "downloads"
+    const val CONFIDANTS = "confidants"
     const val ARTIST = "artist?name={name}&id={id}"
     fun artist(name: String, id: String?) = "artist?name=${Uri.encode(name)}" + (id?.let { "&id=${Uri.encode(it)}" } ?: "")
     const val STATS = "stats"
@@ -107,6 +110,7 @@ fun PersonaMusicApp() {
                     onOpenSettings = { nav.navigate(Routes.CUSTOMIZE) },
                     onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
                     onSignIn = { nav.navigate(Routes.YT_LOGIN) },
+                    onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
                     contentPadding = padding,
                 )
             }
@@ -170,7 +174,10 @@ fun PersonaMusicApp() {
                 )
             }
             composable(Routes.DOWNLOADS) { DownloadsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
-            composable(Routes.STATS) { StatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
+            composable(Routes.STATS) {
+                StatsScreen(onBack = { nav.popBackStack() }, onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) }, contentPadding = padding)
+            }
+            composable(Routes.CONFIDANTS) { ConfidantsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CUSTOMIZE) { CustomizeScreen(
                     onBack = { nav.popBackStack() },
                     onSignIn = { nav.navigate(Routes.YT_LOGIN) },
@@ -195,6 +202,8 @@ fun PersonaMusicApp() {
                 PersonaBottomBar(selected = selectedTab, onSelect = ::selectTab)
             }
         }
+
+        RankUpOverlay()
     }
     }
 }

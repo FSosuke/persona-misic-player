@@ -75,7 +75,7 @@ import com.fsosuke.personamusic.ui.theme.PersonaFonts
 import com.fsosuke.personamusic.ui.theme.PersonaType
 import kotlinx.coroutines.launch
 
-private enum class PlayerOverlay { Menu, Lyrics, Stats }
+private enum class PlayerOverlay { Menu, Lyrics, Stats, Sleep }
 
 @Composable
 fun NowPlayingScreen(
@@ -128,6 +128,10 @@ fun NowPlayingScreen(
                         .size(width = 56.dp, height = 6.dp)
                         .background(Color(0xFF9A9A9A), RoundedCornerShape(3.dp))
                         .clickable(onClick = onClose),
+                )
+                SleepTimerBadge(
+                    onClick = { overlay = PlayerOverlay.Sleep },
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp),
                 )
                 IconButton(onClick = { overlay = PlayerOverlay.Menu }, modifier = Modifier.align(Alignment.CenterEnd)) {
                     Icon(Icons.Filled.Star, "Menu", tint = Color.White, modifier = Modifier.size(32.dp))
@@ -279,6 +283,7 @@ fun NowPlayingScreen(
             entries = listOf(
                 "Playlist" to { overlay = null; addToPlaylist = song != null },
                 "Radio" to { overlay = null; song?.let { startRadio(container, context, it) }; Unit },
+                "Sleep" to { overlay = PlayerOverlay.Sleep },
                 (if (isDownloaded) "Delete file" else "Download") to {
                     overlay = null
                     song?.let {
@@ -291,6 +296,7 @@ fun NowPlayingScreen(
                 "Share" to { overlay = null; song?.let { shareSong(context, it) }; Unit },
             ),
         )
+        SleepTimerOverlay(visible = overlay == PlayerOverlay.Sleep, onDismiss = { overlay = null })
         if (song != null) {
             LyricsOverlay(
                 visible = overlay == PlayerOverlay.Lyrics,
