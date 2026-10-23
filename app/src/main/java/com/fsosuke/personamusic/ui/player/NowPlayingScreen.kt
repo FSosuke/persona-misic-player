@@ -66,6 +66,7 @@ import com.fsosuke.personamusic.ui.components.drawGrinningNote
 import com.fsosuke.personamusic.ui.components.formatDuration
 import com.fsosuke.personamusic.ui.components.phantomSlashes
 import com.fsosuke.personamusic.ui.components.shareSong
+import com.fsosuke.personamusic.ui.components.startRadio
 import com.fsosuke.personamusic.ui.components.slantShape
 import com.fsosuke.personamusic.ui.components.tornBand
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -184,7 +185,7 @@ fun NowPlayingScreen(
                     if (liked) Chunky.HeartFilled else Chunky.Heart,
                     size = 30.dp,
                     fill = if (liked) colors.accent else Color.White,
-                    onClick = { scope.launch { container.repository.setLiked(song, !liked) } },
+                    onClick = { scope.launch { container.setLiked(song, !liked) } },
                 )
                 Spacer(Modifier.width(10.dp))
                 ChunkyIcon(Chunky.Lyrics, size = 34.dp, onClick = { overlay = PlayerOverlay.Lyrics })
@@ -273,6 +274,7 @@ fun NowPlayingScreen(
             onDismiss = { overlay = null },
             entries = listOf(
                 "Playlist" to { overlay = null; addToPlaylist = song != null },
+                "Radio" to { overlay = null; song?.let { startRadio(container, context, it) }; Unit },
                 "Stats" to { overlay = if (song != null) PlayerOverlay.Stats else null },
                 "Customize" to { overlay = null; onOpenCustomize() },
                 "Share" to { overlay = null; song?.let { shareSong(context, it) }; Unit },

@@ -35,6 +35,32 @@ class AppSettings(context: Context) {
     /** SponsorBlock "music_offtopic" skipping, the way ReVanced does it for YouTube Music. */
     val skipNonMusic: StateFlow<Boolean> = _skipNonMusic.asStateFlow()
 
+    private val _autoplay = MutableStateFlow(prefs.getBoolean(KEY_AUTOPLAY, true))
+    /** Keep the music going with similar songs when the queue runs out. */
+    val autoplay: StateFlow<Boolean> = _autoplay.asStateFlow()
+
+    private val _syncLikes = MutableStateFlow(prefs.getBoolean(KEY_SYNC_LIKES, true))
+    val syncLikes: StateFlow<Boolean> = _syncLikes.asStateFlow()
+
+    private val _reportHistory = MutableStateFlow(prefs.getBoolean(KEY_REPORT_HISTORY, true))
+    /** Add plays to the YouTube history so YT Music recommendations keep learning. */
+    val reportHistory: StateFlow<Boolean> = _reportHistory.asStateFlow()
+
+    fun setAutoplay(value: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTOPLAY, value).apply()
+        _autoplay.value = value
+    }
+
+    fun setSyncLikes(value: Boolean) {
+        prefs.edit().putBoolean(KEY_SYNC_LIKES, value).apply()
+        _syncLikes.value = value
+    }
+
+    fun setReportHistory(value: Boolean) {
+        prefs.edit().putBoolean(KEY_REPORT_HISTORY, value).apply()
+        _reportHistory.value = value
+    }
+
     private val _playerBackground = MutableStateFlow(prefs.getString(KEY_PLAYER_BG, null))
     /** Optional user image (file path) behind the player, shown as P5 duotone. */
     val playerBackground: StateFlow<String?> = _playerBackground.asStateFlow()
@@ -72,6 +98,9 @@ class AppSettings(context: Context) {
         const val KEY_QUALITY = "quality"
         const val KEY_SKIP_NON_MUSIC = "skip_non_music"
         const val KEY_PLAYER_BG = "player_background"
+        const val KEY_AUTOPLAY = "autoplay"
+        const val KEY_SYNC_LIKES = "sync_likes"
+        const val KEY_REPORT_HISTORY = "report_history"
         const val KEY_HOME_BG = "home_background"
     }
 }

@@ -7,6 +7,7 @@ import com.fsosuke.personamusic.data.BackupManager
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
+import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.update.UpdateManager
 import com.fsosuke.personamusic.youtube.InnerTube
@@ -36,8 +37,16 @@ class AppContainer(context: Context) {
     val lyrics = LyricsRepository(httpClient)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
-    val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, appScope)
+    val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)
     val player = PlayerConnection(context)
     val backup = BackupManager(context, database, settings)
     val updates = UpdateManager(context, httpClient, appScope)
+
+    /** Heart a song locally and, for YouTube songs, on the signed-in YouTube Music account too. */
+    suspend fun setLiked(song: Song, liked: Boolean) {
+        repository.setLiked(song, liked)
+        if (settings.syncLikes.value && ytAccounts.cookie != null) {
+            runCatching { ytLibrary.rate(song, liked) }
+        }
+    }
 }

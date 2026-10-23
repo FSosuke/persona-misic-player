@@ -71,7 +71,7 @@ fun PlaylistDetailScreen(playlistId: Long, onBack: () -> Unit, contentPadding: P
 
     fun remove(song: Song) {
         scope.launch {
-            if (isFavourites) repo.setLiked(song, false) else repo.removeFromPlaylist(playlistId, song.id)
+            if (isFavourites) container.setLiked(song, false) else repo.removeFromPlaylist(playlistId, song.id)
         }
     }
 

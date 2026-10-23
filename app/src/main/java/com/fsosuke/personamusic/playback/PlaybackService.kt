@@ -43,6 +43,8 @@ class PlaybackService : MediaSessionService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var session: MediaSession? = null
     private var skipJob: Job? = null
+    private var historyJob: Job? = null
+    private var extendingQueue = false
     private var consecutiveErrors = 0
 
     // Listening-time bookkeeping for the play event of the current item.
@@ -145,14 +147,25 @@ class PlaybackService : MediaSessionService() {
             currentEvent = null
             listenedMs = 0
             playingSince = if (player.isPlaying) SystemClock.elapsedRealtime() else null
+            historyJob?.cancel()
             mediaItem ?: return
             currentEvent = scope.async(Dispatchers.IO) { container.repository.logPlay(mediaItem.mediaId) }
+            maybeExtendQueue()
 
             val videoId = mediaItem.requestMetadata.mediaUri
                 ?.takeIf { it.scheme == YouTubeMusic.SCHEME }
                 ?.schemeSpecificPart
             if (videoId != null && container.settings.skipNonMusic.value) {
                 skipJob = scope.launch { skipNonMusic(videoId) }
+            }
+            if (videoId != null && container.settings.reportHistory.value && container.ytAccounts.cookie != null) {
+                // Like YouTube itself, only count it once the song has really been listened to.
+                historyJob = scope.launch {
+                    delay(HISTORY_AFTER_MS)
+                    if (player.currentMediaItem?.mediaId == mediaItem.mediaId) {
+                        runCatching { container.ytLibrary.registerPlayback(videoId) }
+                    }
+                }
             }
         }
 
@@ -181,6 +194,26 @@ class PlaybackService : MediaSessionService() {
             }
         }
 
+        /** Autoplay: when the queue is about to run out, append a radio of the current song. */
+        private fun maybeExtendQueue() {
+            if (!container.settings.autoplay.value || extendingQueue) return
+            if (player.repeatMode != Player.REPEAT_MODE_OFF) return
+            if (player.mediaItemCount - player.currentMediaItemIndex > AUTOPLAY_THRESHOLD) return
+            val seed = player.currentMediaItem?.toSong() ?: return
+            extendingQueue = true
+            scope.launch {
+                val queued = (0 until player.mediaItemCount).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
+                val more = runCatching { container.ytLibrary.radio(seed) }.getOrDefault(emptyList())
+                    .filter { it.id !in queued }
+                    .take(AUTOPLAY_BATCH)
+                if (more.isNotEmpty()) {
+                    container.repository.remember(more)
+                    player.addMediaItems(more.map { it.toMediaItem() })
+                }
+                extendingQueue = false
+            }
+        }
+
         private suspend fun skipNonMusic(videoId: String) {
             val segments: List<SponsorBlock.Segment> = container.sponsorBlock.nonMusicSegments(videoId)
             if (segments.isEmpty()) return
@@ -202,5 +235,8 @@ class PlaybackService : MediaSessionService() {
 
     private companion object {
         const val MAX_CONSECUTIVE_ERRORS = 3
+        const val HISTORY_AFTER_MS = 30_000L
+        const val AUTOPLAY_THRESHOLD = 2
+        const val AUTOPLAY_BATCH = 20
     }
 }

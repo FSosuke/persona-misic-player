@@ -50,6 +50,12 @@ class InnerTube(private val client: OkHttpClient, context: Context) {
         }
     }
 
+    /** Authenticated GET, used for playback-statistics pings. */
+    suspend fun ping(url: String, cookie: String) = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url(url).headers(headers(cookie, clientVersion(cookie))).get().build()
+        client.newCall(request).execute().close()
+    }
+
     private fun clientContext(version: String): JSONObject {
         val locale = Locale.getDefault()
         return JSONObject().put(

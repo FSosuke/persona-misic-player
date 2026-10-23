@@ -11,6 +11,8 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
   - **Skip non-music parts** via SponsorBlock (`music_offtopic`), like ReVanced.
   - Audio quality choice (best / data saver).
 - **YouTube Music account (optional)** – sign in (Customize → Sign in) to get your personal recommendations ("Quick picks", mixes, …) on Home and your YT Music playlists, albums and Liked Music on the playlist board. The login cookie is stored encrypted with the Android Keystore and only sent to music.youtube.com. Playback still goes through NewPipe, so still no ads.
+- **Sync with YouTube Music** – hearts become "Liked music", add songs to (or create) YT Music playlists, and plays land in your YouTube history so recommendations keep learning (each can be switched off).
+- **Radio & autoplay** – "Start radio" on any song (local songs are matched on YouTube), and when the queue runs out it keeps going with similar songs.
 - **Persona UI** – ransom-note titles in mixed display fonts, star-pattern backgrounds, slanted cards, the red halftone playlist board, the star pause menu (Playlist / Stats / Customize / Share).
   - Player with red slashes, sparkles, "CHANGE" graffiti, torn-paper control band, grinning-note seek bar and chunky P5 icons.
   - **"NEXT" queue** – cut-out cards on a red board, drag to reorder, swipe to remove.

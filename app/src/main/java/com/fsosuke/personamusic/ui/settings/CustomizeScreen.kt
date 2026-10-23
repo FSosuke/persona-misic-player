@@ -70,6 +70,9 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
     val quality by settings.quality.collectAsStateWithLifecycle()
     val skipNonMusic by settings.skipNonMusic.collectAsStateWithLifecycle()
     val playerBackground by settings.playerBackground.collectAsStateWithLifecycle()
+    val autoplay by settings.autoplay.collectAsStateWithLifecycle()
+    val syncLikes by settings.syncLikes.collectAsStateWithLifecycle()
+    val reportHistory by settings.reportHistory.collectAsStateWithLifecycle()
     val homeBackground by settings.homeBackground.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -199,6 +202,26 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                     }
                 }
                 Spacer(Modifier.height(4.dp))
+                SettingSwitch(
+                    title = "Autoplay",
+                    description = "When the queue ends, keep going with a radio of similar songs.",
+                    checked = autoplay,
+                    onChange = settings::setAutoplay,
+                )
+                SettingSwitch(
+                    title = "Sync likes",
+                    description = "Hearting a YouTube song also likes it on your YouTube Music account.",
+                    checked = syncLikes,
+                    onChange = settings::setSyncLikes,
+                    enabled = ytAccount != null,
+                )
+                SettingSwitch(
+                    title = "Add to YouTube history",
+                    description = "Songs you listen to (30 s+) show up in your history, so YouTube Music recommendations keep learning.",
+                    checked = reportHistory,
+                    onChange = settings::setReportHistory,
+                    enabled = ytAccount != null,
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Skip non-music parts", color = Color.White, style = PersonaType.title)
@@ -364,5 +387,23 @@ private fun BackupSection() {
             PersonaButton("Import", onClick = { importer.launch(arrayOf("application/json", "*/*")) }, inverted = true)
         }
         message?.let { Text(it, color = Color.White, style = PersonaType.caption) }
+    }
+}
+
+@Composable
+private fun SettingSwitch(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
+    val colors = LocalPersonaColors.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.alpha(if (enabled) 1f else 0.45f)) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, style = PersonaType.title)
+            Text(description, color = colors.muted, style = PersonaType.caption)
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(checkedTrackColor = colors.accent, checkedThumbColor = colors.onAccent),
+        )
     }
 }

@@ -11,7 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
+import com.fsosuke.personamusic.data.youtubeId
 
 /** A YouTube Music collection: a browsable playlist/album, or a radio-style mix (`watch:` prefix). */
 data class YtPlaylist(
@@ -51,6 +55,7 @@ data class YtFeed(
 class YtMusicLibrary(
     private val api: InnerTube,
     private val accounts: YtAccountManager,
+    private val youTube: YouTubeMusic,
     private val scope: CoroutineScope,
 ) {
     private val _feed = MutableStateFlow(YtFeed())
@@ -180,15 +185,17 @@ class YtMusicLibrary(
     }
 
     /** Mixes ("My Supermix", radios) are queues from the `next` endpoint, not browse pages. */
-    private suspend fun loadMix(spec: String, cookie: String?): YtPlaylistPage {
-        val playlistId = spec.substringBefore('|')
-        val params = spec.substringAfter('|', "").ifEmpty { null }
+    private suspend fun loadMix(spec: String, cookie: String?): YtPlaylistPage =
+        loadQueue(spec.substringBefore('|'), null, spec.substringAfter('|', "").ifEmpty { null }, cookie)
+
+    private suspend fun loadQueue(playlistId: String, videoId: String?, params: String?, cookie: String?): YtPlaylistPage {
         val body = JSONObject()
             .put("playlistId", playlistId)
             .put("isAudioOnly", true)
             .put("enablePersistentPlaylistPanel", true)
             .put("tunerSettingValue", "AUTOMIX_SETTING_NORMAL")
         if (params != null) body.put("params", params)
+        if (videoId != null) body.put("videoId", videoId)
         val json = api.post("next", cookie, body)
         val songs = findAll(json, "playlistPanelVideoRenderer").mapNotNull { r ->
             val videoId = r.optString("videoId").ifEmpty { null } ?: return@mapNotNull null
@@ -205,6 +212,78 @@ class YtMusicLibrary(
         }
         val title = findFirst(json, "playlistPanelRenderer").obj("title").runsText() ?: "Mix"
         return YtPlaylistPage(title, null, songs.firstOrNull()?.artworkUri, songs.distinctBy { it.id })
+    }
+
+    // --- Radio ------------------------------------------------------------------------------
+
+    /**
+     * "Song radio": an endless-style mix of similar songs seeded by [seed]. Local songs are first
+     * matched to their YouTube counterpart by title + artist.
+     */
+    suspend fun radio(seed: Song): List<Song> {
+        val videoId = videoIdFor(seed) ?: return emptyList()
+        return loadQueue("RDAMVM$videoId", videoId, null, accounts.cookie).songs
+            .filter { it.youtubeId != videoId }
+    }
+
+    private suspend fun videoIdFor(song: Song): String? =
+        song.youtubeId ?: runCatching { youTube.searchSongs("${song.title} ${song.artist}").firstOrNull()?.youtubeId }.getOrNull()
+
+    // --- Sync (writes to the signed-in account) --------------------------------------------
+
+    /** Mirrors the in-app heart to "Liked music" on YouTube Music. */
+    suspend fun rate(song: Song, liked: Boolean) {
+        val cookie = accounts.cookie ?: return
+        val videoId = song.youtubeId ?: return
+        api.post(
+            if (liked) "like/like" else "like/removelike",
+            cookie,
+            JSONObject().put("target", JSONObject().put("videoId", videoId)),
+        )
+    }
+
+    /** Playlists of the account that can take new songs (no albums, mixes or Liked Music). */
+    fun editablePlaylists(): List<YtPlaylist> =
+        _feed.value.playlists.filter { it.id.startsWith("VL") && it.id != LIKED_ID }
+
+    suspend fun addToPlaylist(playlist: YtPlaylist, song: Song) {
+        val cookie = accounts.cookie ?: throw IOException("Nicht bei YouTube Music angemeldet")
+        val videoId = videoIdFor(song) ?: throw IOException("Song nicht auf YouTube Music gefunden")
+        val action = JSONObject().put("action", "ACTION_ADD_VIDEO").put("addedVideoId", videoId)
+        val result = api.post(
+            "browse/edit_playlist",
+            cookie,
+            JSONObject().put("playlistId", playlist.id.removePrefix("VL")).put("actions", JSONArray().put(action)),
+        )
+        if (result.optString("status") != "STATUS_SUCCEEDED") {
+            throw IOException("\"${playlist.title}\" kann nicht bearbeitet werden")
+        }
+    }
+
+    suspend fun createPlaylist(title: String, song: Song) {
+        val cookie = accounts.cookie ?: throw IOException("Nicht bei YouTube Music angemeldet")
+        val videoId = videoIdFor(song) ?: throw IOException("Song nicht auf YouTube Music gefunden")
+        api.post(
+            "playlist/create",
+            cookie,
+            JSONObject().put("title", title).put("privacyStatus", "PRIVATE").put("videoIds", JSONArray().put(videoId)),
+        )
+        refresh(force = true)
+    }
+
+    /** Puts a play into the account's YouTube history so recommendations keep learning. */
+    suspend fun registerPlayback(videoId: String) {
+        val cookie = accounts.cookie ?: return
+        val player = api.post("player", cookie, JSONObject().put("videoId", videoId))
+        val base = player.str("playbackTracking", "videostatsPlaybackUrl", "baseUrl") ?: return
+        val cpnAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+        val cpn = (1..16).map { cpnAlphabet.random() }.joinToString("")
+        val url = base.toHttpUrl().newBuilder()
+            .addQueryParameter("ver", "2")
+            .addQueryParameter("c", "WEB_REMIX")
+            .addQueryParameter("cpn", cpn)
+            .build()
+        api.ping(url.toString(), cookie)
     }
 
     // --- Continuations ---------------------------------------------------------------------

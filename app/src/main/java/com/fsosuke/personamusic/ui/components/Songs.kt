@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.AlertDialog
@@ -66,7 +67,12 @@ import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.data.SongSource
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.material3.Switch
+import com.fsosuke.personamusic.youtube.YtPlaylist
 
 val LocalAppContainer = staticCompositionLocalOf<AppContainer> { error("AppContainer not provided") }
 
@@ -154,6 +160,10 @@ fun SongMenuButton(
                 scope.launch { container.repository.remember(listOf(song)) }
                 container.player.playNext(song)
             }
+            MenuEntry("Start radio", Icons.Filled.Radio) {
+                expanded = false
+                startRadio(container, context, song)
+            }
             MenuEntry("Add to queue", Icons.AutoMirrored.Filled.QueueMusic) {
                 expanded = false
                 scope.launch { container.repository.remember(listOf(song)) }
@@ -161,7 +171,7 @@ fun SongMenuButton(
             }
             MenuEntry(if (liked) "Remove from favourites" else "Add to favourites", if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder) {
                 expanded = false
-                scope.launch { container.repository.setLiked(song, !liked) }
+                scope.launch { container.setLiked(song, !liked) }
             }
             MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
                 expanded = false
@@ -196,6 +206,22 @@ fun MenuEntry(text: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
     )
 }
 
+/** Replaces the queue with [song] followed by a YouTube Music radio of similar songs. */
+fun startRadio(container: AppContainer, context: Context, song: Song) {
+    Toast.makeText(context, "Tuning in to \"${song.title}\" radio…", Toast.LENGTH_SHORT).show()
+    container.appScope.launch {
+        val songs = runCatching { container.ytLibrary.radio(song) }.getOrDefault(emptyList())
+        container.repository.remember(songs + song)
+        withContext(Dispatchers.Main) {
+            if (songs.isEmpty()) {
+                Toast.makeText(context, "No radio found for this song", Toast.LENGTH_SHORT).show()
+            } else {
+                container.player.play(listOf(song) + songs)
+            }
+        }
+    }
+}
+
 fun shareSong(context: Context, song: Song) {
     val text = if (song.source == SongSource.YOUTUBE) "${song.title} – ${song.artist}\n${song.uri}" else "${song.title} – ${song.artist}"
     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -208,10 +234,30 @@ fun shareSong(context: Context, song: Song) {
 @Composable
 fun AddToPlaylistDialog(song: Song, onDismiss: () -> Unit) {
     val container = LocalAppContainer.current
+    val context = LocalContext.current
+    val colors = LocalPersonaColors.current
     val scope = rememberCoroutineScope()
     val playlists by container.repository.playlists.collectAsState(initial = emptyList())
+    val ytAccount by container.ytAccounts.account.collectAsState()
+    val ytFeed by container.ytLibrary.feed.collectAsState()
+    val ytPlaylists = remember(ytFeed) { container.ytLibrary.editablePlaylists() }
     var creating by rememberSaveable { mutableStateOf(false) }
+    var onYouTube by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf("") }
+
+    fun addToYt(playlist: YtPlaylist) {
+        onDismiss()
+        container.appScope.launch {
+            val result = runCatching { container.ytLibrary.addToPlaylist(playlist, song) }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    result.fold({ "Added to \"${playlist.title}\" on YouTube Music" }, { it.localizedMessage ?: "Failed" }),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -221,23 +267,35 @@ fun AddToPlaylistDialog(song: Song, onDismiss: () -> Unit) {
         title = { RansomText("Add to playlist", fontSize = 22.sp) },
         text = {
             if (creating) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
+                Column {
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
+                    if (ytAccount != null) {
+                        Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Create on YouTube Music", color = Color.White, style = PersonaType.body, modifier = Modifier.weight(1f))
+                            Switch(checked = onYouTube, onCheckedChange = { onYouTube = it })
+                        }
+                    }
+                }
             } else {
-                LazyColumn(Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    items(playlists, key = { it.id }) { playlist ->
-                        Text(
-                            playlist.name,
-                            color = Color.White,
-                            style = PersonaType.title,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    scope.launch { container.repository.addToPlaylist(playlist.id, song) }
-                                    onDismiss()
-                                }
-                                .padding(vertical = 12.dp),
-                        )
-                        HorizontalDivider(color = Color(0xFF333333))
+                LazyColumn(Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    items(playlists, key = { "local-${it.id}" }) { playlist ->
+                        DialogRow(playlist.name, badge = null) {
+                            scope.launch { container.repository.addToPlaylist(playlist.id, song) }
+                            onDismiss()
+                        }
+                    }
+                    if (ytPlaylists.isNotEmpty()) {
+                        item(key = "yt-header") {
+                            Text(
+                                "YOUTUBE MUSIC",
+                                color = colors.accent,
+                                style = PersonaType.label,
+                                modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
+                            )
+                        }
+                        items(ytPlaylists, key = { "yt-${it.id}" }) { playlist ->
+                            DialogRow(playlist.title, badge = "YT") { addToYt(playlist) }
+                        }
                     }
                 }
             }
@@ -247,9 +305,22 @@ fun AddToPlaylistDialog(song: Song, onDismiss: () -> Unit) {
                 TextButton(onClick = {
                     val trimmed = name.trim()
                     if (trimmed.isNotEmpty()) {
-                        scope.launch {
-                            val id = container.repository.createPlaylist(trimmed)
-                            container.repository.addToPlaylist(id, song)
+                        if (onYouTube) {
+                            container.appScope.launch {
+                                val result = runCatching { container.ytLibrary.createPlaylist(trimmed, song) }
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        result.fold({ "Created \"$trimmed\" on YouTube Music" }, { it.localizedMessage ?: "Failed" }),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            }
+                        } else {
+                            scope.launch {
+                                val id = container.repository.createPlaylist(trimmed)
+                                container.repository.addToPlaylist(id, song)
+                            }
                         }
                         onDismiss()
                     }
@@ -260,6 +331,24 @@ fun AddToPlaylistDialog(song: Song, onDismiss: () -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun DialogRow(title: String, badge: String?, onClick: () -> Unit) {
+    Column {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = Color.White, style = PersonaType.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (badge != null) {
+                Box(Modifier.background(Color.White).padding(horizontal = 5.dp)) {
+                    Text(badge, color = Color.Black, style = PersonaType.label.copy(fontSize = 12.sp))
+                }
+            }
+        }
+        HorizontalDivider(color = Color(0xFF333333))
+    }
 }
 
 /** The highlighted red-framed card from the search screen. */
@@ -289,7 +378,7 @@ fun TopResultCard(song: Song, onPlay: () -> Unit, modifier: Modifier = Modifier)
                 Spacer(Modifier.size(6.dp))
                 ArtistText(song.artist, color = colors.muted, style = PersonaType.body)
             }
-            IconButton(onClick = { scope.launch { container.repository.setLiked(song, !liked) } }) {
+            IconButton(onClick = { scope.launch { container.setLiked(song, !liked) } }) {
                 Icon(
                     if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     contentDescription = "Favourite",

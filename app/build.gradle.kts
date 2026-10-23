@@ -13,8 +13,8 @@ android {
         applicationId = "com.fsosuke.personamusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
 
         // Where the in-app updater looks for new releases (CI passes the real repo name).
         val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "FSosuke/persona-music-player"
