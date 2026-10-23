@@ -27,17 +27,22 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
 Kotlin · Jetpack Compose · Media3 (ExoPlayer + MediaSession) · Room · Coil · OkHttp · NewPipeExtractor.
 Min SDK 26 (Android 8), target SDK 35.
 
-## Install
+## Install & updates
 
-Every push builds an APK via GitHub Actions (**Actions → Build APK → Artifacts → `persona-music-player-apk`**).
-Unzip and install `app-release.apk` (or `app-debug.apk`) on your phone.
+Grab the APK from the **[latest release](../../releases/latest)** and install it. From then on the app
+checks GitHub for new releases itself and shows a **"New mission"** card on Home – tap *Update*, then
+*Install*. Updates install over the old version, so your library, playlists and login stay.
 
-> CI signs the release APK with a throwaway debug key, so when updating you may have to uninstall the previous version first.
+Each push that bumps `versionName` in `app/build.gradle.kts` publishes a new release automatically
+(signed with the release key from the `KEYSTORE_BASE64` / `KEYSTORE_PASSWORD` repository secrets).
+
+**Backup:** Customize → *Updates & backup* → Export / Import saves favourites, playlists, history and
+theme to a JSON file.
 
 Build locally with Android Studio or:
 
 ```sh
-./gradlew assembleDebug
+./gradlew assembleRelease   # signed with the debug key unless SIGNING_KEYSTORE_PATH is set
 ```
 
 ## Notes

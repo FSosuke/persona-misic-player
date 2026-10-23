@@ -58,6 +58,7 @@ import com.fsosuke.personamusic.ui.components.slantShape
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
 import com.fsosuke.personamusic.ui.theme.colors
+import com.fsosuke.personamusic.update.UpdateState
 
 @Composable
 fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: PaddingValues) {
@@ -237,6 +238,13 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                 )
             }
         }
+        item {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                CalloutBanner("Updates & backup", Modifier.padding(end = 12.dp, top = 20.dp))
+            }
+        }
+        item { UpdatesSection() }
+        item { BackupSection() }
         item { Watermark() }
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -289,5 +297,72 @@ private fun Watermark() {
                 style = PersonaType.label.copy(fontSize = 11.sp, letterSpacing = 2.sp),
             )
         }
+    }
+}
+
+@Composable
+private fun UpdatesSection() {
+    val updates = LocalAppContainer.current.updates
+    val colors = LocalPersonaColors.current
+    val state by updates.state.collectAsStateWithLifecycle()
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Version ${updates.currentVersion}", color = Color.White, style = PersonaType.title)
+            Text(
+                when (val s = state) {
+                    UpdateState.Checking -> "Checking…"
+                    UpdateState.UpToDate -> "You're up to date."
+                    is UpdateState.Available -> "Version ${s.update.version} is available – see Home."
+                    is UpdateState.Downloading -> "Downloading ${(s.progress * 100).toInt()} %"
+                    is UpdateState.Ready -> "Ready to install."
+                    is UpdateState.Failed -> "Check failed: ${s.message}"
+                    UpdateState.Idle -> "Checks automatically every few hours."
+                },
+                color = colors.muted,
+                style = PersonaType.caption,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        PersonaButton("Check", onClick = { updates.check() }, inverted = true)
+    }
+}
+
+@Composable
+private fun BackupSection() {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val scope = rememberCoroutineScope()
+    var message by remember { mutableStateOf<String?>(null) }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            message = runCatching { container.backup.export(uri) }.fold(
+                { "Saved: ${it.songs} songs, ${it.playlists} playlists, ${it.plays} plays." },
+                { "Export failed: ${it.localizedMessage}" },
+            )
+        }
+    }
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            message = runCatching { container.backup.import(uri) }.fold(
+                { "Restored: ${it.songs} songs, ${it.playlists} playlists, ${it.plays} new plays." },
+                { "Import failed: ${it.localizedMessage}" },
+            )
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Backup", color = Color.White, style = PersonaType.title)
+        Text(
+            "Saves favourites, playlists, play history and theme to a file. Your YouTube login is not included.",
+            color = colors.muted,
+            style = PersonaType.caption,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            PersonaButton("Export", onClick = {
+                val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                exporter.launch("persona-music-backup-$date.json")
+            })
+            PersonaButton("Import", onClick = { importer.launch(arrayOf("application/json", "*/*")) }, inverted = true)
+        }
+        message?.let { Text(it, color = Color.White, style = PersonaType.caption) }
     }
 }

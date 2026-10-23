@@ -43,6 +43,35 @@ interface MusicDao {
     )
     fun artistPlays(artist: String): Flow<Int>
 
+    // --- Backup ----------------------------------------------------------------------------
+
+    @Query("SELECT * FROM songs")
+    suspend fun allSongs(): List<Song>
+
+    @Query("SELECT * FROM liked_songs")
+    suspend fun allLiked(): List<LikedSong>
+
+    @Query("SELECT * FROM playlists")
+    suspend fun allPlaylists(): List<Playlist>
+
+    @Query("SELECT * FROM playlist_entries")
+    suspend fun allEntries(): List<PlaylistEntry>
+
+    @Query("SELECT * FROM play_events")
+    suspend fun allEvents(): List<PlayEvent>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertLiked(liked: List<LikedSong>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertEntries(entries: List<PlaylistEntry>)
+
+    @Insert
+    suspend fun insertEvents(events: List<PlayEvent>)
+
+    @Query("SELECT id FROM playlists WHERE name = :name LIMIT 1")
+    suspend fun playlistIdByName(name: String): Long?
+
     // --- Likes -----------------------------------------------------------------------------
 
     @Query("SELECT EXISTS(SELECT 1 FROM liked_songs WHERE songId = :songId)")

@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,11 +18,46 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build debug + release APK
-        run: ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: Read version
+        run: echo "VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)" >> "$GITHUB_ENV"
+
+      # Secrets are not available to pull requests from forks; the build then uses the debug key.
+      - name: Set up release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode --ignore-garbage > "$RUNNER_TEMP/release.jks"
+            echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "SIGNED=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::KEYSTORE_BASE64 secret missing - APK is signed with a throwaway debug key"
+          fi
+
+      - name: Build release APK
+        env:
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "persona-music-$VERSION.apk"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: persona-music-player-apk
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
+          name: persona-music-${{ env.VERSION }}
+          path: persona-music-*.apk
+
+      # Each new versionName becomes a GitHub release that the in-app updater picks up.
+      - name: Publish release
+        if: env.SIGNED == 'true' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists - bump versionName to publish a new one."
+          else
+            gh release create "v$VERSION" "persona-music-$VERSION.apk" \
+              --target "$GITHUB_SHA" \
+              --title "Persona Music $VERSION" \
+              --notes "$(git log -1 --pretty=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d')"
+          fi

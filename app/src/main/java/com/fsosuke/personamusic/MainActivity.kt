@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         container.player.connect()
+        container.updates.checkIfDue()
     }
 
     override fun onStop() {

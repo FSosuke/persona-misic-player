@@ -56,6 +56,7 @@ import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.PersonaSearchField
 import com.fsosuke.personamusic.ui.components.SongRow
 import com.fsosuke.personamusic.ui.components.TopResultCard
+import com.fsosuke.personamusic.ui.components.UpdateBanner
 import com.fsosuke.personamusic.ui.components.jaggedCardShape
 import com.fsosuke.personamusic.ui.components.starPattern
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -108,6 +109,7 @@ fun HomeScreen(
         }
 
         if (query.isBlank()) {
+            item { UpdateBanner() }
             if (ytAccount != null) {
                 if (ytFeed.home.isEmpty() && ytFeed.loading) {
                     item {

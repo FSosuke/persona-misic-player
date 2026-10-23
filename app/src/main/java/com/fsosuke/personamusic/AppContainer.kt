@@ -3,10 +3,12 @@ package com.fsosuke.personamusic
 import android.content.Context
 import com.fsosuke.personamusic.data.AppDatabase
 import com.fsosuke.personamusic.data.AppSettings
+import com.fsosuke.personamusic.data.BackupManager
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.playback.PlayerConnection
+import com.fsosuke.personamusic.update.UpdateManager
 import com.fsosuke.personamusic.youtube.InnerTube
 import com.fsosuke.personamusic.youtube.SponsorBlock
 import com.fsosuke.personamusic.youtube.YtAccountManager
@@ -36,4 +38,6 @@ class AppContainer(context: Context) {
     val ytAccounts = YtAccountManager(context, innerTube)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, appScope)
     val player = PlayerConnection(context)
+    val backup = BackupManager(context, database, settings)
+    val updates = UpdateManager(context, httpClient, appScope)
 }
