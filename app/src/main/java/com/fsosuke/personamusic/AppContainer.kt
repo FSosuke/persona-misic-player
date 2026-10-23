@@ -1,6 +1,8 @@
 package com.fsosuke.personamusic
 
 import android.content.Context
+import android.net.Uri
+import android.provider.DocumentsContract
 import com.fsosuke.personamusic.data.AppDatabase
 import com.fsosuke.personamusic.data.AppSettings
 import com.fsosuke.personamusic.data.BackupManager
@@ -9,6 +11,7 @@ import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.download.DownloadManager
 import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.update.UpdateManager
 import com.fsosuke.personamusic.youtube.InnerTube
@@ -32,7 +35,18 @@ class AppContainer(context: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
     val database = AppDatabase.create(context)
-    val repository = MusicRepository(database.musicDao(), LocalMusicScanner(context))
+    val repository = MusicRepository(
+        database.musicDao(),
+        LocalMusicScanner(context) {
+            // Downloads get their own card, so keep them out of the local library.
+            settings.downloadFolder.value?.let { uri ->
+                runCatching { DocumentsContract.getTreeDocumentId(Uri.parse(uri)) }.getOrNull()
+                    ?.takeIf { it.startsWith("primary:") }
+                    ?.substringAfter(':')
+                    ?.let { if (it.isEmpty()) null else "$it/" }
+            }
+        },
+    )
     val youTube = YouTubeMusic(httpClient, settings)
     val sponsorBlock = SponsorBlock(httpClient)
     val lyrics = LyricsRepository(httpClient)
@@ -42,6 +56,7 @@ class AppContainer(context: Context) {
     val player = PlayerConnection(context)
     val backup = BackupManager(context, database, settings)
     val searchHistory = SearchHistory(context)
+    val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
 
     /** Heart a song locally and, for YouTube songs, on the signed-in YouTube Music account too. */

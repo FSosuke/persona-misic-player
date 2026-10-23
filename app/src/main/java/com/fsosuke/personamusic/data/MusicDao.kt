@@ -43,6 +43,20 @@ interface MusicDao {
     )
     fun artistPlays(artist: String): Flow<Int>
 
+    // --- Downloads -------------------------------------------------------------------------
+
+    @Upsert
+    suspend fun upsertDownload(entry: DownloadEntry)
+
+    @Query("DELETE FROM downloads WHERE songId = :songId")
+    suspend fun deleteDownload(songId: String)
+
+    @Query("SELECT * FROM downloads")
+    fun downloads(): Flow<List<DownloadEntry>>
+
+    @Query("SELECT s.* FROM downloads d JOIN songs s ON s.id = d.songId ORDER BY d.downloadedAt DESC")
+    fun downloadedSongs(): Flow<List<Song>>
+
     // --- Backup ----------------------------------------------------------------------------
 
     @Query("SELECT * FROM songs")

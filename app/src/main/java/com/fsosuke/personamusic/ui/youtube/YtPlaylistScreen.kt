@@ -40,6 +40,7 @@ import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.SongRow
+import com.fsosuke.personamusic.ui.components.rememberDownloadAction
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
 import com.fsosuke.personamusic.youtube.YtPlaylistPage
@@ -63,6 +64,7 @@ fun YtPlaylistScreen(playlistId: String, onBack: () -> Unit, contentPadding: Pad
             .fold<PageState, YtPlaylistPage>({ PageState.Loaded(it) }, { PageState.Failed(it.localizedMessage ?: it.javaClass.simpleName) })
     }
     val playerState by container.player.state.collectAsStateWithLifecycle()
+    val download = rememberDownloadAction()
 
     fun play(songs: List<Song>, index: Int, shuffle: Boolean = false) {
         container.appScope.launch { container.repository.remember(songs) }
@@ -113,6 +115,7 @@ fun YtPlaylistScreen(playlistId: String, onBack: () -> Unit, contentPadding: Pad
                         Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             PersonaButton("Play", onClick = { play(page.songs, 0) })
                             PersonaButton("Shuffle", onClick = { play(page.songs, 0, shuffle = true) }, inverted = true)
+                            PersonaButton("Save", onClick = { download(page.songs) }, inverted = true)
                         }
                     }
                     itemsIndexed(page.songs, key = { i, song -> "$i-${song.id}" }) { index, song ->

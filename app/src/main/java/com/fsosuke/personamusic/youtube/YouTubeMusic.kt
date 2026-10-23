@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.Image
+import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.search.SearchInfo
@@ -70,6 +71,26 @@ class YouTubeMusic(client: OkHttpClient, private val settings: AppSettings) {
         // Stream urls are signed for ~6h; refresh a bit earlier.
         streamCache[videoId] = CachedStream(stream.content, System.currentTimeMillis() + STREAM_TTL_MS)
         return stream.content
+    }
+
+    data class DownloadStream(val url: String, val mimeType: String, val extension: String)
+
+    /** Like [resolveStreamUrl], but prefers M4A (AAC) so files play and tag well everywhere. */
+    fun resolveDownload(videoId: String): DownloadStream {
+        val info = StreamInfo.getInfo(ServiceList.YouTube, watchUrl(videoId))
+        val candidates = info.audioStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+        val original = candidates.filter { it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL }
+            .ifEmpty { candidates }
+        val pool = original.filter { it.format == MediaFormat.M4A }.ifEmpty { original }
+        val stream = when (settings.quality.value) {
+            AudioQuality.BEST -> pool.maxByOrNull { it.averageBitrate }
+            AudioQuality.DATA_SAVER -> pool.minByOrNull { it.averageBitrate }
+        } ?: throw IOException("No downloadable audio stream for $videoId")
+        return if (stream.format == MediaFormat.M4A) {
+            DownloadStream(stream.content, "audio/mp4", "m4a")
+        } else {
+            DownloadStream(stream.content, "audio/webm", "webm")
+        }
     }
 
     fun invalidate(videoId: String) {

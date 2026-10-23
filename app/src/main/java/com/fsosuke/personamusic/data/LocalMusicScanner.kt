@@ -3,12 +3,17 @@ package com.fsosuke.personamusic.data
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Reads every music file known to Android's MediaStore. */
-class LocalMusicScanner(private val context: Context) {
+class LocalMusicScanner(
+    private val context: Context,
+    /** MediaStore relative path (e.g. "Music/Persona/") whose files are skipped – the download folder. */
+    private val excludedRelativePath: () -> String? = { null },
+) {
 
     suspend fun scan(): List<Song> = withContext(Dispatchers.IO) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -19,7 +24,8 @@ class LocalMusicScanner(private val context: Context) {
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION,
-        )
+        ) + if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) arrayOf(MediaStore.Audio.Media.RELATIVE_PATH) else emptyArray()
+        val excluded = excludedRelativePath()
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
         val songs = mutableListOf<Song>()
         context.contentResolver.query(collection, projection, selection, null, null)?.use { cursor ->
@@ -29,7 +35,9 @@ class LocalMusicScanner(private val context: Context) {
             val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val pathCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) cursor.getColumnIndex(MediaStore.Audio.Media.RELATIVE_PATH) else -1
             while (cursor.moveToNext()) {
+                if (excluded != null && pathCol >= 0 && cursor.getString(pathCol)?.startsWith(excluded, ignoreCase = true) == true) continue
                 val id = cursor.getLong(idCol)
                 val albumId = cursor.getLong(albumIdCol)
                 val artist = cursor.getString(artistCol)

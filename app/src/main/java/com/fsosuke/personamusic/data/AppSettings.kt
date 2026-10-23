@@ -61,6 +61,15 @@ class AppSettings(context: Context) {
         _reportHistory.value = value
     }
 
+    private val _downloadFolder = MutableStateFlow(prefs.getString(KEY_DOWNLOAD_FOLDER, null))
+    /** SAF tree uri of the folder downloads are saved to; null until the user picks one. */
+    val downloadFolder: StateFlow<String?> = _downloadFolder.asStateFlow()
+
+    fun setDownloadFolder(uri: String?) {
+        prefs.edit().putString(KEY_DOWNLOAD_FOLDER, uri).apply()
+        _downloadFolder.value = uri
+    }
+
     private val _playerBackground = MutableStateFlow(prefs.getString(KEY_PLAYER_BG, null))
     /** Optional user image (file path) behind the player, shown as P5 duotone. */
     val playerBackground: StateFlow<String?> = _playerBackground.asStateFlow()
@@ -99,6 +108,7 @@ class AppSettings(context: Context) {
         const val KEY_SKIP_NON_MUSIC = "skip_non_music"
         const val KEY_PLAYER_BG = "player_background"
         const val KEY_AUTOPLAY = "autoplay"
+        const val KEY_DOWNLOAD_FOLDER = "download_folder"
         const val KEY_SYNC_LIKES = "sync_likes"
         const val KEY_REPORT_HISTORY = "report_history"
         const val KEY_HOME_BG = "home_background"

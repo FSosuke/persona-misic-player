@@ -266,6 +266,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                 CalloutBanner("Updates & backup", Modifier.padding(end = 12.dp, top = 20.dp))
             }
         }
+        item { DownloadFolderSection() }
         item { UpdatesSection() }
         item { BackupSection() }
         item { Watermark() }
@@ -405,5 +406,28 @@ private fun SettingSwitch(title: String, description: String, checked: Boolean, 
             enabled = enabled,
             colors = SwitchDefaults.colors(checkedTrackColor = colors.accent, checkedThumbColor = colors.onAccent),
         )
+    }
+}
+
+@Composable
+private fun DownloadFolderSection() {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val folder by container.settings.downloadFolder.collectAsStateWithLifecycle()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) container.downloads.setFolder(uri)
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Download folder", color = Color.White, style = PersonaType.title)
+            Text(
+                if (folder == null) "Not chosen yet – you can also create a new folder in the picker."
+                else container.downloads.folderLabel() ?: folder.orEmpty(),
+                color = colors.muted,
+                style = PersonaType.caption,
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        PersonaButton(if (folder == null) "Choose" else "Change", onClick = { picker.launch(null) }, inverted = true)
     }
 }

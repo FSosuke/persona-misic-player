@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -60,7 +61,7 @@ private val RowHeight = 170.dp
  * black line, like the confidant map in Persona 5.
  */
 @Composable
-fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, contentPadding: PaddingValues) {
+fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, onOpenDownloads: () -> Unit, contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
     val colors = LocalPersonaColors.current
     val scope = rememberCoroutineScope()
@@ -69,9 +70,11 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, contentP
     var creating by rememberSaveable { mutableStateOf(false) }
 
     val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
+    val downloaded by container.downloads.downloadedSongs.collectAsStateWithLifecycle(initialValue = emptyList())
 
     val cards = buildList {
         add(BoardCard("fav", "Favourites", "${liked.size}", liked.firstOrNull { it.artworkUri != null }?.artworkUri, isFavourites = true) { onOpen(FAVOURITES_ID) })
+        add(BoardCard("downloads", "Downloads", "${downloaded.size}", downloaded.firstOrNull { it.artworkUri != null }?.artworkUri, isDownloads = true) { onOpenDownloads() })
         playlists.forEach { p -> add(BoardCard("local-${p.id}", p.name, "${p.songCount}", p.coverUri) { onOpen(p.id) }) }
         ytFeed.playlists.forEach { p -> add(BoardCard("yt-${p.id}", p.title, null, p.thumbnail, isYouTube = true) { onOpenYt(p.id) }) }
     }
@@ -150,6 +153,7 @@ private class BoardCard(
     val cover: String?,
     val isFavourites: Boolean = false,
     val isYouTube: Boolean = false,
+    val isDownloads: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -161,7 +165,14 @@ private fun PlaylistCard(card: BoardCard, index: Int, modifier: Modifier = Modif
         // Drop shadow in dark accent, offset like a cut-out pasted on the board.
         Box(Modifier.matchParentSize().offset(8.dp, 8.dp).background(Color(0xFF5A0008), shape))
         Box(Modifier.matchParentSize().background(Color.Black, shape).padding(10.dp)) {
-            if (card.isFavourites && card.cover == null) {
+            if (card.isDownloads && card.cover == null) {
+                Icon(
+                    Icons.Filled.DownloadDone,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.align(Alignment.Center).size(64.dp),
+                )
+            } else if (card.isFavourites && card.cover == null) {
                 Icon(
                     Icons.Filled.Favorite,
                     contentDescription = null,

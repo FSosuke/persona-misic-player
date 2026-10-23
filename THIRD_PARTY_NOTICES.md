@@ -19,6 +19,7 @@ All fonts come from Google Fonts and may be bundled and redistributed in apps.
 
 - Lyrics: [LRCLIB](https://lrclib.net) (free community lyrics database)
 - Non-music segments: [SponsorBlock](https://sponsor.ajay.app)
+- Audio tagging for downloads: [jaudiotagger](https://bitbucket.org/ijabz/jaudiotagger) (LGPL 2.1)
 - YouTube extraction: [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPLv3)
 
 All Persona-style graphics (stars, slashes, sparkles, gloves, icons) are drawn in code for this

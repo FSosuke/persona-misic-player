@@ -20,6 +20,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.fsosuke.personamusic.MainActivity
 import com.fsosuke.personamusic.PersonaApp
+import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.youtube.NewPipeDownloader
 import com.fsosuke.personamusic.youtube.SponsorBlock
 import com.fsosuke.personamusic.youtube.YouTubeMusic
@@ -62,7 +63,10 @@ class PlaybackService : MediaSessionService() {
             .setUserAgent(NewPipeDownloader.USER_AGENT)
         val dataSourceFactory = ResolvingDataSource.Factory(DefaultDataSource.Factory(this, httpFactory)) { spec ->
             if (spec.uri.scheme == YouTubeMusic.SCHEME) {
-                spec.withUri(Uri.parse(youTube.resolveStreamUrl(spec.uri.schemeSpecificPart)))
+                val videoId = spec.uri.schemeSpecificPart
+                // Downloaded songs play from the saved file: offline and without using data.
+                val file = container.downloads.uriFor(Song.YT_PREFIX + videoId)
+                spec.withUri(Uri.parse(file ?: youTube.resolveStreamUrl(videoId)))
             } else {
                 spec
             }
@@ -185,7 +189,10 @@ class PlaybackService : MediaSessionService() {
             // Drop a possibly expired stream url, then move on instead of getting stuck.
             player.currentMediaItem?.requestMetadata?.mediaUri
                 ?.takeIf { it.scheme == YouTubeMusic.SCHEME }
-                ?.let { container.youTube.invalidate(it.schemeSpecificPart) }
+                ?.let {
+                    container.youTube.invalidate(it.schemeSpecificPart)
+                    container.appScope.launch { container.downloads.verify(Song.YT_PREFIX + it.schemeSpecificPart) }
+                }
             consecutiveErrors++
             if (consecutiveErrors <= MAX_CONSECUTIVE_ERRORS && player.hasNextMediaItem()) {
                 player.seekToNextMediaItem()

@@ -33,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
+import com.fsosuke.personamusic.ui.download.DownloadsScreen
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.LocalOpenArtist
 import com.fsosuke.personamusic.ui.components.MiniPlayer
@@ -53,6 +54,7 @@ import com.fsosuke.personamusic.ui.youtube.YtPlaylistScreen
 private object Routes {
     const val PLAYER = "player"
     const val QUEUE = "queue"
+    const val DOWNLOADS = "downloads"
     const val ARTIST = "artist?name={name}&id={id}"
     fun artist(name: String, id: String?) = "artist?name=${Uri.encode(name)}" + (id?.let { "&id=${Uri.encode(it)}" } ?: "")
     const val STATS = "stats"
@@ -76,7 +78,7 @@ fun PersonaMusicApp() {
 
     val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
-        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST) Tab.Playlists else null
+        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS) Tab.Playlists else null
 
     var chromeHeightPx by remember { mutableIntStateOf(0) }
     val chromeHeight = with(LocalDensity.current) { chromeHeightPx.toDp() }
@@ -113,6 +115,7 @@ fun PersonaMusicApp() {
                 PlaylistsScreen(
                     onOpen = { nav.navigate(Routes.playlist(it)) },
                     onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
+                    onOpenDownloads = { nav.navigate(Routes.DOWNLOADS) },
                     contentPadding = padding,
                 )
             }
@@ -166,6 +169,7 @@ fun PersonaMusicApp() {
                     contentPadding = padding,
                 )
             }
+            composable(Routes.DOWNLOADS) { DownloadsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.STATS) { StatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CUSTOMIZE) { CustomizeScreen(
                     onBack = { nav.popBackStack() },

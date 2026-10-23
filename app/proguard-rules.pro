@@ -9,3 +9,11 @@
 -dontwarn jdk.dynalink.**
 -dontwarn com.google.re2j.**
 -dontwarn org.jspecify.**
+
+# jaudiotagger (tagging downloads) instantiates frame classes by name and references desktop-only APIs.
+-keep class org.jaudiotagger.** { *; }
+-dontwarn org.jaudiotagger.**
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn javax.swing.**
+-dontwarn javax.sound.**

@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Song::class, LikedSong::class, Playlist::class, PlaylistEntry::class, PlayEvent::class],
-    version = 2,
+    entities = [Song::class, LikedSong::class, Playlist::class, PlaylistEntry::class, PlayEvent::class, DownloadEntry::class],
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -18,8 +18,17 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "persona_music.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS downloads (songId TEXT NOT NULL, fileUri TEXT NOT NULL, " +
+                        "sizeBytes INTEGER NOT NULL, downloadedAt INTEGER NOT NULL, PRIMARY KEY(songId))"
+                )
+            }
+        }
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {

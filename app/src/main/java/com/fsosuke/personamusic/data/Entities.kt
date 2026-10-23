@@ -89,3 +89,12 @@ data class SongStats(
     val firstPlayed: Long?,
     val lastPlayed: Long?,
 )
+
+/** A YouTube song saved as a file in the user's download folder. */
+@Entity(tableName = "downloads")
+data class DownloadEntry(
+    @PrimaryKey val songId: String,
+    val fileUri: String,
+    val sizeBytes: Long,
+    val downloadedAt: Long = System.currentTimeMillis(),
+)

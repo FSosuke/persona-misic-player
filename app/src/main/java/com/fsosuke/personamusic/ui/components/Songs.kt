@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
@@ -124,6 +126,7 @@ fun SongRow(
             )
             ArtistText(song.artist, color = colors.muted, style = PersonaType.caption)
         }
+        DownloadBadge(song, Modifier.padding(end = 8.dp))
         Text(formatDuration(song.durationMs), color = colors.muted, style = PersonaType.caption)
         SongMenuButton(song, extraMenu = extraMenu)
     }
@@ -144,6 +147,8 @@ fun SongMenuButton(
     var addToPlaylist by remember { mutableStateOf(false) }
     val liked by remember(song.id) { container.repository.isLiked(song.id) }.collectAsState(initial = false)
     val openArtist = LocalOpenArtist.current
+    val download = rememberDownloadAction()
+    val savedDownloads by container.downloads.downloaded.collectAsState()
 
     Box(modifier) {
         IconButton(onClick = { expanded = true }) {
@@ -176,6 +181,19 @@ fun SongMenuButton(
             MenuEntry("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd) {
                 expanded = false
                 addToPlaylist = true
+            }
+            if (song.source == SongSource.YOUTUBE) {
+                if (song.id in savedDownloads) {
+                    MenuEntry("Remove download", Icons.Filled.DeleteOutline) {
+                        expanded = false
+                        container.appScope.launch { container.downloads.remove(song.id) }
+                    }
+                } else {
+                    MenuEntry("Download", Icons.Filled.Download) {
+                        expanded = false
+                        download(listOf(song))
+                    }
+                }
             }
             if (isRealArtist(song.artist)) {
                 MenuEntry("Go to artist", Icons.Filled.Person) {
