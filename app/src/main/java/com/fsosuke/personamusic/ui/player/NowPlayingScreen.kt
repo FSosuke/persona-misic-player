@@ -384,6 +384,11 @@ fun PersonaSeekBar(positionMs: Long, durationMs: Long, onSeek: (Long) -> Unit, m
                 drawGrinningNote(Offset(fx, h * 0.48f), h * 0.42f, colors.accent)
             }
         }
-        Text(formatDuration(durationMs), color = Color.White, style = timeStyle, modifier = Modifier.padding(start = 8.dp).width(52.dp))
+        if (durationMs <= 0 && positionMs > 0) {
+            // Live stations have no end.
+            Text("● LIVE", color = colors.accent, style = timeStyle.copy(fontSize = 14.sp), modifier = Modifier.padding(start = 8.dp).width(52.dp))
+        } else {
+            Text(formatDuration(durationMs), color = Color.White, style = timeStyle, modifier = Modifier.padding(start = 8.dp).width(52.dp))
+        }
     }
 }

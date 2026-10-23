@@ -19,8 +19,12 @@ import org.schabi.newpipe.extractor.stream.AudioTrackType
 import org.schabi.newpipe.extractor.stream.DeliveryMethod
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
+import org.schabi.newpipe.extractor.stream.StreamType
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+
+/** Thrown while resolving a live stream: it has to be played as HLS from [hlsUrl] instead. */
+class LiveStreamException(val hlsUrl: String) : IOException("Live stream")
 
 /**
  * YouTube Music access without the official client.
@@ -60,7 +64,10 @@ class YouTubeMusic(client: OkHttpClient, private val settings: AppSettings) {
         streamCache[videoId]?.takeIf { it.expiresAt > System.currentTimeMillis() }?.let { return it.url }
 
         val info = StreamInfo.getInfo(ServiceList.YouTube, watchUrl(videoId))
+        val isLive = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
         val candidates = info.audioStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
+        // 24/7 artist stations and other live streams only exist as an HLS stream.
+        if ((isLive || candidates.isEmpty()) && !info.hlsUrl.isNullOrEmpty()) throw LiveStreamException(info.hlsUrl)
         val original = candidates.filter { it.audioTrackType == null || it.audioTrackType == AudioTrackType.ORIGINAL }
             .ifEmpty { candidates }
         val stream: AudioStream = when (settings.quality.value) {

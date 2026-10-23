@@ -13,8 +13,8 @@ android {
         applicationId = "com.fsosuke.personamusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.7.1"
+        versionCode = 10
+        versionName = "0.7.2"
 
         // Where the in-app updater looks for new releases (CI passes the real repo name).
         val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "FSosuke/persona-music-player"
@@ -85,6 +85,7 @@ dependencies {
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
+    implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.datasource.okhttp)
 
     implementation(libs.room.runtime)

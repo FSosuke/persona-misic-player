@@ -8,6 +8,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -21,6 +22,7 @@ import androidx.media3.session.MediaSessionService
 import com.fsosuke.personamusic.MainActivity
 import com.fsosuke.personamusic.PersonaApp
 import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.youtube.LiveStreamException
 import com.fsosuke.personamusic.youtube.NewPipeDownloader
 import com.fsosuke.personamusic.youtube.SponsorBlock
 import com.fsosuke.personamusic.youtube.YouTubeMusic
@@ -186,6 +188,20 @@ class PlaybackService : MediaSessionService() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            // A live station can't be played as a file: swap the item for its HLS stream and retry.
+            val live = generateSequence<Throwable>(error) { it.cause }.filterIsInstance<LiveStreamException>().firstOrNull()
+            val current = player.currentMediaItem
+            if (live != null && current != null) {
+                val index = player.currentMediaItemIndex
+                player.replaceMediaItem(
+                    index,
+                    current.buildUpon().setUri(live.hlsUrl).setMimeType(MimeTypes.APPLICATION_M3U8).build(),
+                )
+                player.seekToDefaultPosition(index)
+                player.prepare()
+                player.play()
+                return
+            }
             // Drop a possibly expired stream url, then move on instead of getting stuck.
             player.currentMediaItem?.requestMetadata?.mediaUri
                 ?.takeIf { it.scheme == YouTubeMusic.SCHEME }
