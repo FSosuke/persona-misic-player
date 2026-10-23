@@ -29,6 +29,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalFocusManager
+import com.fsosuke.personamusic.ui.components.LocalOpenArtist
+import com.fsosuke.personamusic.ui.search.SearchActions
+import com.fsosuke.personamusic.ui.search.searchCategory
+import com.fsosuke.personamusic.ui.search.searchFilterTabs
+import com.fsosuke.personamusic.ui.search.searchOverview
+import com.fsosuke.personamusic.ui.search.searchSuggestions
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,10 +81,18 @@ fun HomeScreen(
     contentPadding: PaddingValues,
 ) {
     val container = LocalAppContainer.current
-    val vm: HomeViewModel = viewModel { HomeViewModel(container.repository, container.youTube) }
+    val vm: HomeViewModel = viewModel { HomeViewModel(container.repository, container.ytLibrary, container.searchHistory) }
     val query by vm.query.collectAsStateWithLifecycle()
-    val online by vm.online.collectAsStateWithLifecycle()
+    val submitted by vm.submitted.collectAsStateWithLifecycle()
+    val filter by vm.filter.collectAsStateWithLifecycle()
+    val suggestions by vm.suggestions.collectAsStateWithLifecycle()
+    val history by vm.searchHistory.collectAsStateWithLifecycle()
+    val results by vm.results.collectAsStateWithLifecycle()
+    val filtered by vm.filtered.collectAsStateWithLifecycle()
     val local by vm.local.collectAsStateWithLifecycle()
+    var searchFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val openArtist = LocalOpenArtist.current
     val recent by vm.recent.collectAsStateWithLifecycle()
     val mostPlayed by vm.mostPlayed.collectAsStateWithLifecycle()
     val songLog by vm.songLog.collectAsStateWithLifecycle()
@@ -104,11 +122,41 @@ fun HomeScreen(
                     }
                 },
             ) {
-                PersonaSearchField(value = query, onValueChange = vm::setQuery, placeholder = "Search YouTube Music & library")
+                PersonaSearchField(
+                    value = query,
+                    onValueChange = vm::setQuery,
+                    placeholder = "Search YouTube Music & library",
+                    onSearch = { vm.submit() },
+                    onFocusChange = { searchFocused = it },
+                )
             }
         }
 
-        if (query.isBlank()) {
+        val typing = query.isNotBlank() && query.trim() != submitted
+        val showHistory = searchFocused && query.isBlank() && history.isNotEmpty()
+        val actions = SearchActions(play = ::play, openCollection = onOpenYtPlaylist, openArtist = openArtist)
+
+        if (typing || showHistory) {
+            searchSuggestions(
+                query = query,
+                history = history,
+                suggestions = suggestions,
+                onPick = { picked ->
+                    vm.submit(picked)
+                    focusManager.clearFocus()
+                },
+                onFill = vm::setQuery,
+                onRemoveHistory = vm::removeFromHistory,
+                onClearHistory = vm::clearHistory,
+            )
+        } else if (submitted.isNotBlank()) {
+            searchFilterTabs(filter, vm::setFilter)
+            if (filter == SearchFilter.All) {
+                searchOverview(results, local, currentId, actions, onShowAll = vm::setFilter)
+            } else {
+                searchCategory(filter, filtered, local, currentId, actions)
+            }
+        } else {
             item { UpdateBanner() }
             if (ytAccount != null) {
                 if (ytFeed.home.isEmpty() && ytFeed.loading) {
@@ -172,36 +220,6 @@ fun HomeScreen(
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                         PersonaButton("Connect YouTube Music", onClick = onSignIn, inverted = true)
                     }
-                }
-            }
-        } else {
-            when (val result = online) {
-                OnlineResults.Idle, OnlineResults.Loading -> item {
-                    Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = LocalPersonaColors.current.accent)
-                    }
-                }
-                is OnlineResults.Failed -> item {
-                    EmptyState("Mission failed", "YouTube search failed: ${result.message}")
-                }
-                is OnlineResults.Loaded -> {
-                    val songs = result.songs
-                    if (songs.isNotEmpty()) {
-                        item { DashedSectionTitle("Top result") }
-                        item { TopResultCard(songs.first(), onPlay = { play(songs, 0) }) }
-                    }
-                    if (songs.size > 1) {
-                        item { DashedSectionTitle("Songs") }
-                        itemsIndexed(songs.drop(1), key = { _, s -> "yt-" + s.id }) { i, song ->
-                            SongRow(song, onClick = { play(songs, i + 1) }, isCurrent = song.id == currentId)
-                        }
-                    }
-                }
-            }
-            if (local.isNotEmpty()) {
-                item { DashedSectionTitle("Library") }
-                itemsIndexed(local, key = { _, s -> "local-" + s.id }) { i, song ->
-                    SongRow(song, onClick = { play(local, i) }, showArtwork = true, isCurrent = song.id == currentId)
                 }
             }
         }

@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -102,6 +103,8 @@ fun PersonaSearchField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
+    onSearch: () -> Unit = {},
+    onFocusChange: (Boolean) -> Unit = {},
 ) {
     val colors = LocalPersonaColors.current
     val focus = LocalFocusManager.current
@@ -138,8 +141,11 @@ fun PersonaSearchField(
                     textStyle = TextStyle(color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp),
                     cursorBrush = SolidColor(colors.accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
-                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(onSearch = {
+                        onSearch()
+                        focus.clearFocus()
+                    }),
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { onFocusChange(it.isFocused) },
                 )
             }
             if (value.isNotEmpty()) {

@@ -7,6 +7,7 @@ import com.fsosuke.personamusic.data.BackupManager
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
+import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.update.UpdateManager
@@ -40,6 +41,7 @@ class AppContainer(context: Context) {
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)
     val player = PlayerConnection(context)
     val backup = BackupManager(context, database, settings)
+    val searchHistory = SearchHistory(context)
     val updates = UpdateManager(context, httpClient, appScope)
 
     /** Heart a song locally and, for YouTube songs, on the signed-in YouTube Music account too. */

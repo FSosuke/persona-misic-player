@@ -31,6 +31,22 @@ sealed interface YtItem {
     data class ArtistItem(val name: String, val browseId: String, val thumbnail: String?) : YtItem
 }
 
+enum class SearchKind(val defaultParams: String) {
+    Songs("EgWKAQIIAWoKEAkQBRAKEAMQBA=="),
+    Albums("EgWKAQIYAWoKEAkQChAFEAMQBA=="),
+    Artists("EgWKAQIgAWoKEAkQChAFEAMQBA=="),
+    Playlists("EgeKAQQoAEABagoQAxAEEAoQCRAF"),
+}
+
+data class SearchResults(
+    val top: YtItem? = null,
+    val songs: List<Song> = emptyList(),
+    val artists: List<YtItem.ArtistItem> = emptyList(),
+    val albums: List<YtItem.Collection> = emptyList(),
+    val playlists: List<YtItem.Collection> = emptyList(),
+    val moreParams: Map<SearchKind, String> = emptyMap(),
+)
+
 data class YtArtistPage(
     val browseId: String,
     val name: String,
@@ -214,6 +230,83 @@ class YtMusicLibrary(
         return YtPlaylistPage(title, null, songs.firstOrNull()?.artworkUri, songs.distinctBy { it.id })
     }
 
+    // --- Search -----------------------------------------------------------------------------
+
+    suspend fun suggestions(input: String): List<String> {
+        val json = api.post("music/get_search_suggestions", accounts.cookie, JSONObject().put("input", input))
+        return (findAll(json, "searchSuggestionRenderer") + findAll(json, "historySuggestionRenderer"))
+            .mapNotNull { it.obj("suggestion").runsText() }
+            .distinct()
+            .take(8)
+    }
+
+    /** Full YouTube Music search: top result plus songs, artists, albums and playlists. */
+    suspend fun search(query: String): SearchResults {
+        val json = try {
+            api.post("search", accounts.cookie, JSONObject().put("query", query))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Fall back to NewPipe's song search if the InnerTube search is unavailable.
+            return SearchResults(songs = youTube.searchSongs(query))
+        }
+        val songs = mutableListOf<Song>()
+        val artists = mutableListOf<YtItem.ArtistItem>()
+        val albums = mutableListOf<YtItem.Collection>()
+        val playlists = mutableListOf<YtItem.Collection>()
+        val more = mutableMapOf<SearchKind, String>()
+
+        fun add(item: YtItem?) {
+            when (item) {
+                is YtItem.SongItem -> songs += item.song
+                is YtItem.ArtistItem -> artists += item
+                is YtItem.Collection -> if (item.playlist.id.startsWith("MPRE")) albums += item else playlists += item
+                null -> Unit
+            }
+        }
+
+        val card = findFirst(json, "musicCardShelfRenderer")
+        val top = card?.let { parseTopCard(it) }
+        if (card != null) findAll(card, "musicResponsiveListItemRenderer").forEach { add(parseResponsive(it)) }
+        findAll(json, "musicShelfRenderer").forEach { shelf ->
+            val items = findAll(shelf, "musicResponsiveListItemRenderer").mapNotNull { parseResponsive(it) }
+            val params = shelf.obj("bottomEndpoint", "searchEndpoint")?.str("params")
+            val kind = items.firstOrNull()?.let { kindOf(it) }
+            if (params != null && kind != null) more.putIfAbsent(kind, params)
+            items.forEach { add(it) }
+        }
+        return SearchResults(
+            top = top,
+            songs = songs.distinctBy { it.id },
+            artists = artists.distinctBy { it.browseId },
+            albums = albums.distinctBy { it.playlist.id },
+            playlists = playlists.distinctBy { it.playlist.id },
+            moreParams = more,
+        )
+    }
+
+    /** One category only ("all songs", "all albums", …), using the params the full search handed out. */
+    suspend fun searchFiltered(query: String, kind: SearchKind, params: String?): List<YtItem> {
+        val json = api.post("search", accounts.cookie, JSONObject().put("query", query).put("params", params ?: kind.defaultParams))
+        return findAll(json, "musicResponsiveListItemRenderer").mapNotNull { parseResponsive(it) }
+            .filter { kindOf(it) == kind }
+    }
+
+    private fun kindOf(item: YtItem): SearchKind = when (item) {
+        is YtItem.SongItem -> SearchKind.Songs
+        is YtItem.ArtistItem -> SearchKind.Artists
+        is YtItem.Collection -> if (item.playlist.id.startsWith("MPRE")) SearchKind.Albums else SearchKind.Playlists
+    }
+
+    private fun parseTopCard(card: JSONObject): YtItem? {
+        val titleRun = card.obj("title")?.optJSONArray("runs")?.objects()?.firstOrNull() ?: return null
+        val title = card.obj("title").runsText() ?: return null
+        val endpoint = titleRun.obj("navigationEndpoint") ?: card.obj("onTap") ?: return null
+        val subtitleRuns = card.obj("subtitle")?.optJSONArray("runs")?.objects().orEmpty()
+        val thumbnail = bestThumbnail(card.arr("thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+        return itemFromEndpoint(endpoint, title, card.obj("subtitle").runsText(), subtitleRuns, thumbnail)
+    }
+
     // --- Radio ------------------------------------------------------------------------------
 
     /**
@@ -303,14 +396,24 @@ class YtMusicLibrary(
     private fun parseTwoRow(r: JSONObject): YtItem? {
         val title = r.obj("title").runsText() ?: return null
         val subtitleRuns = r.obj("subtitle")?.optJSONArray("runs")?.objects().orEmpty()
-        val subtitle = r.obj("subtitle").runsText()
         val thumbnail = bestThumbnail(r.arr("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
         val endpoint = r.obj("navigationEndpoint") ?: return null
+        return itemFromEndpoint(endpoint, title, r.obj("subtitle").runsText(), subtitleRuns, thumbnail)
+    }
 
+    /** Turns a navigation endpoint (+ display data) into a song, collection or artist. */
+    private fun itemFromEndpoint(
+        endpoint: JSONObject,
+        title: String,
+        subtitle: String?,
+        subtitleRuns: List<JSONObject>,
+        thumbnail: String?,
+    ): YtItem? {
         endpoint.obj("watchEndpoint")?.str("videoId")?.let { videoId ->
             val artists = subtitleRuns.filter { pageType(it) == ARTIST }.joinToString(", ") { it.optString("text") }
+            val duration = subtitleRuns.map { it.optString("text") }.lastOrNull { DURATION.matches(it) }
             return YtItem.SongItem(
-                ytSong(videoId, title, artists.ifEmpty { subtitle ?: "Unknown artist" }, null, thumbnail, null)
+                ytSong(videoId, title, artists.ifEmpty { subtitle ?: "Unknown artist" }, null, thumbnail, duration)
             )
         }
         endpoint.obj("watchPlaylistEndpoint")?.let { watch ->
@@ -326,6 +429,19 @@ class YtMusicLibrary(
             ARTIST -> YtItem.ArtistItem(title, browseId, thumbnail)
             else -> null
         }
+    }
+
+    /** List rows in search results can be songs, but also albums, artists or playlists. */
+    private fun parseResponsive(r: JSONObject): YtItem? {
+        val endpoint = r.obj("navigationEndpoint")
+        if (endpoint?.obj("browseEndpoint") != null) {
+            val columns = r.arr("flexColumns")?.objects().orEmpty().map { it.obj("musicResponsiveListItemFlexColumnRenderer", "text") }
+            val title = columns.firstOrNull().runsText() ?: return null
+            val subtitle = columns.drop(1).mapNotNull { it.runsText() }.joinToString(" • ").ifEmpty { null }
+            val thumbnail = bestThumbnail(r.arr("thumbnail", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
+            return itemFromEndpoint(endpoint, title, subtitle, emptyList(), thumbnail)
+        }
+        return parseSong(r)?.let { YtItem.SongItem(it) }
     }
 
     private fun parseSong(r: JSONObject, fallbackThumbnail: String? = null, fallbackArtist: String? = null): Song? {
