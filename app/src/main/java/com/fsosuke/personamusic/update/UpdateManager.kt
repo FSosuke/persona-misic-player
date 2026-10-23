@@ -108,7 +108,8 @@ class UpdateManager(
             .header("Accept", "application/vnd.github+json")
             .build()
         client.newCall(request).execute().use { response ->
-            if (response.code == 404) return@withContext null
+            // GitHub answers 404 both for "no release yet" and for private repositories.
+            if (response.code == 404) throw IOException("Update-Quelle nicht erreichbar (Repository privat oder noch kein Release)")
             if (!response.isSuccessful) throw IOException("GitHub antwortet mit HTTP ${response.code}")
             val json = JSONObject(response.body?.string().orEmpty())
             val version = json.optString("tag_name").removePrefix("v")
