@@ -17,3 +17,6 @@
 -dontwarn javax.imageio.**
 -dontwarn javax.swing.**
 -dontwarn javax.sound.**
+
+# Kuromoji (romaji lyrics) loads its dictionary resources relative to its own classes.
+-keep class com.atilika.kuromoji.** { *; }

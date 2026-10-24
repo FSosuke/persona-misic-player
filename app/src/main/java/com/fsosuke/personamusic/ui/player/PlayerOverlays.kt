@@ -32,7 +32,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.border
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -43,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fsosuke.personamusic.data.Lyrics
+import com.fsosuke.personamusic.data.Romaji
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.ui.components.ArtistText
 import com.fsosuke.personamusic.ui.components.Artwork
@@ -100,7 +106,7 @@ fun LyricsOverlay(visible: Boolean, song: Song, positionMs: Long, onSeek: (Long)
                         textAlign = TextAlign.Center,
                         modifier = Modifier.align(Alignment.Center).padding(24.dp),
                     )
-                    is LyricsState.Found -> LyricsList(s.lyrics, positionMs, onSeek)
+                    is LyricsState.Found -> LyricsWithExtras(song, s.lyrics, positionMs, onSeek)
                 }
                 ChunkyIcon(Chunky.Lyrics, Modifier.align(Alignment.TopStart).padding(10.dp), size = 34.dp)
                 ChunkyIcon(
@@ -115,42 +121,126 @@ fun LyricsOverlay(visible: Boolean, song: Song, positionMs: Long, onSeek: (Long)
     }
 }
 
+/** Lyrics plus optional romaji and translation lines, toggled with two chips at the bottom. */
 @Composable
-private fun LyricsList(lyrics: Lyrics, positionMs: Long, onSeek: (Long) -> Unit) {
+private fun LyricsWithExtras(song: Song, lyrics: Lyrics, positionMs: Long, onSeek: (Long) -> Unit) {
+    val container = LocalAppContainer.current
+    val lines = remember(lyrics) { lyrics.lines.map { it.text } }
+    val isJapanese = remember(lines) { lines.any { Romaji.containsJapanese(it) } }
+    var showRomaji by rememberSaveable { mutableStateOf(false) }
+    var showTranslation by rememberSaveable { mutableStateOf(false) }
+
+    val romaji by produceState<List<String>?>(null, song.id, showRomaji && isJapanese) {
+        value = null
+        if (showRomaji && isJapanese) value = runCatching { Romaji.convert(lines) }.getOrNull()
+    }
+    val translation by produceState<List<String>?>(null, song.id, showTranslation) {
+        value = null
+        if (showTranslation) value = runCatching { container.translator.translate(song.id, lines) }.getOrNull()
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        LyricsList(
+            lyrics,
+            positionMs,
+            onSeek,
+            romaji = if (showRomaji) romaji else null,
+            translation = if (showTranslation) translation else null,
+        )
+        Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (isJapanese) {
+                LyricsToggle("Romaji", showRomaji, loading = showRomaji && romaji == null) { showRomaji = !showRomaji }
+            }
+            LyricsToggle(
+                "Translate (${container.translator.targetLanguage.uppercase()})",
+                showTranslation,
+                loading = showTranslation && translation == null,
+            ) { showTranslation = !showTranslation }
+        }
+    }
+}
+
+@Composable
+private fun LyricsToggle(label: String, active: Boolean, loading: Boolean, onClick: () -> Unit) {
+    val colors = LocalPersonaColors.current
+    Box(
+        Modifier
+            .rotate(if (active) -4f else 0f)
+            .background(if (active) colors.accent else Color.Black, slantShape(0.1f))
+            .border(2.dp, if (active) Color.White else Color(0xFF555555), slantShape(0.1f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 5.dp),
+    ) {
+        Text(
+            (if (loading) "… " else "") + label.uppercase(),
+            color = if (active) colors.onAccent else Color.White,
+            style = PersonaType.label.copy(fontSize = 13.sp),
+        )
+    }
+}
+
+@Composable
+private fun LyricsList(
+    lyrics: Lyrics,
+    positionMs: Long,
+    onSeek: (Long) -> Unit,
+    romaji: List<String>?,
+    translation: List<String>?,
+) {
     val colors = LocalPersonaColors.current
     val listState = rememberLazyListState()
     val current = if (lyrics.synced) lyrics.indexAt(positionMs) else -1
     LaunchedEffect(current) {
-        if (current >= 0) listState.animateScrollToItem((current - 4).coerceAtLeast(0))
+        if (current >= 0) listState.animateScrollToItem((current - 3).coerceAtLeast(0))
     }
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 56.dp, bottom = 48.dp, start = 12.dp, end = 12.dp),
+        contentPadding = PaddingValues(top = 56.dp, bottom = 64.dp, start = 12.dp, end = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         itemsIndexed(lyrics.lines) { index, line ->
             val isCurrent = index == current
             val text = line.text.ifBlank { "♪" }
+            val romajiLine = romaji?.getOrNull(index)?.takeIf { it.isNotBlank() && it != line.text }
+            val translatedLine = translation?.getOrNull(index)?.takeIf { it.isNotBlank() && it != line.text }
             val modifier = Modifier.clickable(enabled = line.timeMs != null) { line.timeMs?.let(onSeek) }
             if (isCurrent) {
-                Box(
+                Column(
                     modifier
                         .rotate(-1.5f)
                         .background(colors.accent, slantShape(0.06f))
                         .padding(horizontal = 26.dp, vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(text, color = colors.onAccent, style = PersonaType.title.copy(fontSize = 19.sp), textAlign = TextAlign.Center)
+                    romajiLine?.let {
+                        Text(it, color = colors.onAccent.copy(alpha = 0.85f), style = PersonaType.caption.copy(fontStyle = FontStyle.Italic), textAlign = TextAlign.Center)
+                    }
+                    translatedLine?.let {
+                        Text(it, color = colors.onAccent, style = PersonaType.caption, textAlign = TextAlign.Center)
+                    }
                 }
             } else {
-                Text(
-                    text,
-                    color = if (current >= 0 && index < current) Color(0xFF6E6E6E) else Color(0xFFB5B5B5),
-                    style = PersonaType.body.copy(fontSize = 16.sp),
-                    textAlign = TextAlign.Center,
-                    modifier = modifier,
-                )
+                val dim = current >= 0 && index < current
+                Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text,
+                        color = if (dim) Color(0xFF6E6E6E) else Color(0xFFB5B5B5),
+                        style = PersonaType.body.copy(fontSize = 16.sp),
+                        textAlign = TextAlign.Center,
+                    )
+                    romajiLine?.let {
+                        Text(it, color = Color(0xFF8C8C8C), style = PersonaType.caption.copy(fontStyle = FontStyle.Italic), textAlign = TextAlign.Center)
+                    }
+                    translatedLine?.let {
+                        Text(it, color = colors.highlight.copy(alpha = if (dim) 0.5f else 0.9f), style = PersonaType.caption, textAlign = TextAlign.Center)
+                    }
+                }
             }
         }
     }

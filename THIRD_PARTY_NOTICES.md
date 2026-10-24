@@ -19,6 +19,8 @@ All fonts come from Google Fonts and may be bundled and redistributed in apps.
 
 - Lyrics: [LRCLIB](https://lrclib.net) (free community lyrics database)
 - Non-music segments: [SponsorBlock](https://sponsor.ajay.app)
+- Romaji: [Kuromoji](https://github.com/atilika/kuromoji) with the IPADIC dictionary (Apache 2.0)
+- Lyric translation: Google Translate web endpoint
 - Audio tagging for downloads: [jaudiotagger](https://bitbucket.org/ijabz/jaudiotagger) (LGPL 2.1)
 - YouTube extraction: [NewPipeExtractor](https://github.com/TeamNewPipe/NewPipeExtractor) (GPLv3)
 

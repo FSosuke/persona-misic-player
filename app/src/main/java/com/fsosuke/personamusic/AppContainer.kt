@@ -10,6 +10,7 @@ import com.fsosuke.personamusic.data.ContentFilter
 import com.fsosuke.personamusic.data.ListeningHistory
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.LyricsRepository
+import com.fsosuke.personamusic.data.Translator
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
@@ -55,6 +56,7 @@ class AppContainer(context: Context) {
     val youTube = YouTubeMusic(httpClient, settings)
     val sponsorBlock = SponsorBlock(httpClient)
     val lyrics = LyricsRepository(httpClient)
+    val translator = Translator(httpClient)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)

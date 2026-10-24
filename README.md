@@ -24,7 +24,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
 - **Persona UI** – ransom-note titles in mixed display fonts, star-pattern backgrounds, slanted cards, the red halftone playlist board, the star pause menu (Playlist / Stats / Customize / Share).
   - Player with red slashes, sparkles, "CHANGE" graffiti, torn-paper control band, grinning-note seek bar and chunky P5 icons.
   - **"NEXT" queue** – cut-out cards on a red board, drag to reorder, swipe to remove.
-  - **Lyrics** (synced where available, via LRCLIB) on a calling card held by white gloves.
+  - **Lyrics** (synced where available, via LRCLIB) on a calling card held by white gloves – with **romaji** for Japanese lyrics (offline, Kuromoji) and a line-by-line **translation** into your phone's language.
   - **Per-song stats** – times played, real listening time, average per play.
   - **Your own backgrounds** – pick any image for the player/home; it gets inked and tinted P5-style.
 - **Home** – Recent, Most Played, Song Log and a 3×3 Speed Dial built from your listening history.
