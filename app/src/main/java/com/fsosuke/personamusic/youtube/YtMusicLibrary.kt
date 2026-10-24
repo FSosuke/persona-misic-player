@@ -59,6 +59,15 @@ data class HomeShelf(val title: String, val items: List<YtItem>)
 
 data class YtPlaylistPage(val title: String, val subtitle: String?, val thumbnail: String?, val songs: List<Song>)
 
+/** Charts and new releases of one country (the Japan tab on Home). */
+data class RegionFeed(
+    val charts: List<HomeShelf> = emptyList(),
+    val newReleases: List<HomeShelf> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+    val loadedAt: Long = 0,
+)
+
 data class YtFeed(
     val home: List<HomeShelf> = emptyList(),
     val playlists: List<YtPlaylist> = emptyList(),
@@ -159,10 +168,61 @@ class YtMusicLibrary(
             val title = header?.obj("title").runsText() ?: return@mapNotNull null
             val items = shelf.arr("contents")?.objects().orEmpty().mapNotNull { entry ->
                 entry.optJSONObject("musicTwoRowItemRenderer")?.let { parseTwoRow(it) }
-                    ?: entry.optJSONObject("musicResponsiveListItemRenderer")?.let { r -> parseSong(r)?.let { YtItem.SongItem(it) } }
+                    ?: entry.optJSONObject("musicResponsiveListItemRenderer")?.let { parseResponsive(it) }
             }
             if (items.isEmpty()) null else HomeShelf(title, items)
         }
+
+    /** Plain list shelves (charts use these for rankings). */
+    private fun parseListShelves(page: JSONObject): List<HomeShelf> =
+        findAll(page, "musicShelfRenderer").mapNotNull { shelf ->
+            val title = shelf.obj("title").runsText() ?: return@mapNotNull null
+            val items = findAll(shelf, "musicResponsiveListItemRenderer").mapNotNull { parseResponsive(it) }
+            if (items.isEmpty()) null else HomeShelf(title, items)
+        }
+
+    // --- Region (Japan tab) ----------------------------------------------------------------
+
+    private val _japan = MutableStateFlow(RegionFeed())
+    val japan: StateFlow<RegionFeed> = _japan.asStateFlow()
+
+    /** Charts and new releases for Japan, cached for an hour. */
+    fun loadJapan(force: Boolean = false) {
+        val current = _japan.value
+        if (current.loading) return
+        if (!force && current.error == null && System.currentTimeMillis() - current.loadedAt < REGION_STALE_MS) return
+        _japan.value = current.copy(loading = true, error = null)
+        scope.launch {
+            val cookie = accounts.cookie
+            val charts = async {
+                runCatching {
+                    val json = api.post(
+                        "browse",
+                        cookie,
+                        JSONObject()
+                            .put("browseId", "FEmusic_charts")
+                            .put("formData", JSONObject().put("selectedValues", JSONArray().put(REGION_JAPAN))),
+                        region = REGION_JAPAN,
+                    )
+                    parseShelves(json) + parseListShelves(json)
+                }
+            }
+            val releases = async {
+                runCatching {
+                    parseShelves(api.post("browse", cookie, JSONObject().put("browseId", "FEmusic_new_releases"), region = REGION_JAPAN))
+                }
+            }
+            val c = charts.await()
+            val r = releases.await()
+            _japan.value = RegionFeed(
+                charts = c.getOrDefault(current.charts),
+                newReleases = r.getOrDefault(current.newReleases),
+                loading = false,
+                error = (c.exceptionOrNull() ?: r.exceptionOrNull())?.let { it.localizedMessage ?: it.javaClass.simpleName },
+                loadedAt = System.currentTimeMillis(),
+            )
+        }
+    }
 
     // --- Library ---------------------------------------------------------------------------
 
@@ -533,6 +593,8 @@ class YtMusicLibrary(
         private const val HOME_PAGES = 3
         private const val MAX_PAGES = 12
         private const val STALE_MS = 30 * 60 * 1000L
+        private const val REGION_STALE_MS = 60 * 60 * 1000L
+        private const val REGION_JAPAN = "JP"
         private val DURATION = Regex("^\\d{1,2}(:\\d{2}){1,2}$")
     }
 }

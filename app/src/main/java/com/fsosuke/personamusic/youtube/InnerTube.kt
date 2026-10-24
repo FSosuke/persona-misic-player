@@ -31,9 +31,11 @@ class InnerTube(private val client: OkHttpClient, context: Context) {
         cookie: String?,
         body: JSONObject = JSONObject(),
         query: Map<String, String> = emptyMap(),
+        /** Region override (e.g. "JP") for charts and new releases of another country. */
+        region: String? = null,
     ): JSONObject = withContext(Dispatchers.IO) {
         val version = clientVersion(cookie)
-        body.put("context", clientContext(version))
+        body.put("context", clientContext(version, region))
         val url = "$ORIGIN/youtubei/v1/$endpoint".toHttpUrl().newBuilder()
             .addQueryParameter("prettyPrint", "false")
             .apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }
@@ -56,7 +58,7 @@ class InnerTube(private val client: OkHttpClient, context: Context) {
         client.newCall(request).execute().close()
     }
 
-    private fun clientContext(version: String): JSONObject {
+    private fun clientContext(version: String, region: String?): JSONObject {
         val locale = Locale.getDefault()
         return JSONObject().put(
             "client",
@@ -64,7 +66,7 @@ class InnerTube(private val client: OkHttpClient, context: Context) {
                 .put("clientName", "WEB_REMIX")
                 .put("clientVersion", version)
                 .put("hl", locale.language.ifEmpty { "en" })
-                .put("gl", locale.country.ifEmpty { "US" }),
+                .put("gl", region ?: locale.country.ifEmpty { "US" }),
         ).put("user", JSONObject())
     }
 

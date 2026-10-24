@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import com.fsosuke.personamusic.ui.components.LocalOpenArtist
@@ -107,6 +108,9 @@ fun HomeScreen(
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
     val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
     val filterRules by container.contentFilter.rules.collectAsStateWithLifecycle()
+    var homeTab by rememberSaveable { mutableStateOf(HomeTab.ForYou) }
+    val japanFeed by container.ytLibrary.japan.collectAsStateWithLifecycle()
+    LaunchedEffect(homeTab) { if (homeTab == HomeTab.Japan) container.ytLibrary.loadJapan() }
     val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
 
     LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
@@ -166,6 +170,20 @@ fun HomeScreen(
             }
         } else {
             item { UpdateBanner() }
+            homeTabs(homeTab) { homeTab = it }
+        }
+        if (!typing && !showHistory && submitted.isBlank() && homeTab == HomeTab.Japan) {
+            japanTab(
+                feed = japanFeed.copy(
+                    charts = ContentFilter.filterShelves(japanFeed.charts, filterRules.copy(japaneseOnly = false)),
+                    newReleases = ContentFilter.filterShelves(japanFeed.newReleases, filterRules.copy(japaneseOnly = false)),
+                ),
+                currentId = currentId,
+                onPlay = { songs, index -> play(songs, index) },
+                onOpenCollection = onOpenYtPlaylist,
+                onRetry = { container.ytLibrary.loadJapan(force = true) },
+            )
+        } else if (!typing && !showHistory && submitted.isBlank()) {
             if (ytAccount != null) {
                 if (ytFeed.home.isEmpty() && ytFeed.loading) {
                     item {
