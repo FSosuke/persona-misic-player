@@ -62,7 +62,7 @@ import com.fsosuke.personamusic.ui.theme.colors
 import com.fsosuke.personamusic.update.UpdateState
 
 @Composable
-fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -> Unit, contentPadding: PaddingValues) {
+fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -> Unit, onOpenSound: () -> Unit, contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
     val settings = container.settings
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
@@ -128,6 +128,18 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -
             }
         }
 
+        item {
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onOpenSound).padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Sound", color = Color.White, style = PersonaType.title)
+                    Text("Equalizer, volume normalization, fade between songs", color = colors.muted, style = PersonaType.caption)
+                }
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(0xFF888888))
+            }
+        }
         item { CalloutBanner("Recommendations", Modifier.padding(start = 12.dp, top = 20.dp), pointLeft = true) }
         item { RecommendationsSection(onOpenHidden) }
         item { ReleaseRadarSection() }
@@ -393,8 +405,39 @@ private fun BackupSection() {
             PersonaButton("Import", onClick = { importer.launch(arrayOf("application/json", "*/*")) }, inverted = true)
         }
         message?.let { Text(it, color = Color.White, style = PersonaType.caption) }
+        AutoBackupRow()
     }
 }
+
+@Composable
+private fun AutoBackupRow() {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val scope = rememberCoroutineScope()
+    val folder by container.settings.backupFolder.collectAsStateWithLifecycle()
+    var status by remember { mutableStateOf<String?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            container.autoBackup.enable(uri)
+            scope.launch {
+                status = runCatching { "First backup saved: " + container.autoBackup.runNow() }
+                    .getOrElse { "Backup failed: ${it.localizedMessage}" }
+            }
+        }
+    }
+    SettingSwitch(
+        title = "Weekly auto-backup",
+        description = if (folder == null) "Saves a backup into a folder of your choice every week (keeps the last 4)."
+        else "Every week into ${folderName(folder)} – the last 4 are kept.",
+        checked = folder != null,
+        onChange = { on -> if (on) picker.launch(null) else container.autoBackup.disable() },
+    )
+    status?.let { Text(it, color = colors.muted, style = PersonaType.caption) }
+}
+
+private fun folderName(uri: String?): String = uri?.let {
+    runCatching { android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(it)).substringAfter(':') }.getOrNull()
+} ?: "your folder"
 
 @Composable
 private fun SettingSwitch(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {

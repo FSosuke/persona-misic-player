@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         }
 
         container.releaseRadar.schedule()
+        container.autoBackup.schedule()
 
         setContent {
             val theme by container.settings.theme.collectAsStateWithLifecycle()

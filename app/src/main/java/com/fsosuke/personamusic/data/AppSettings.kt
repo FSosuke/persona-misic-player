@@ -61,6 +61,46 @@ class AppSettings(context: Context) {
         _reportHistory.value = value
     }
 
+    private val _eqEnabled = MutableStateFlow(prefs.getBoolean(KEY_EQ_ENABLED, false))
+    val eqEnabled: StateFlow<Boolean> = _eqEnabled.asStateFlow()
+    private val _eqLevels = MutableStateFlow(prefs.getString(KEY_EQ_LEVELS, "").orEmpty())
+    /** Equalizer band levels in millibel, comma separated ("" = flat). */
+    val eqLevels: StateFlow<String> = _eqLevels.asStateFlow()
+    private val _normalize = MutableStateFlow(prefs.getBoolean(KEY_NORMALIZE, false))
+    /** Evens out loud and quiet songs (compressor + limiter). */
+    val normalize: StateFlow<Boolean> = _normalize.asStateFlow()
+    private val _crossfadeSeconds = MutableStateFlow(prefs.getInt(KEY_CROSSFADE, 0))
+    val crossfadeSeconds: StateFlow<Int> = _crossfadeSeconds.asStateFlow()
+
+    fun setEqEnabled(value: Boolean) {
+        prefs.edit().putBoolean(KEY_EQ_ENABLED, value).apply()
+        _eqEnabled.value = value
+    }
+
+    fun setEqLevels(value: String) {
+        prefs.edit().putString(KEY_EQ_LEVELS, value).apply()
+        _eqLevels.value = value
+    }
+
+    fun setNormalize(value: Boolean) {
+        prefs.edit().putBoolean(KEY_NORMALIZE, value).apply()
+        _normalize.value = value
+    }
+
+    fun setCrossfadeSeconds(value: Int) {
+        prefs.edit().putInt(KEY_CROSSFADE, value).apply()
+        _crossfadeSeconds.value = value
+    }
+
+    private val _backupFolder = MutableStateFlow(prefs.getString(KEY_BACKUP_FOLDER, null))
+    /** SAF tree uri for automatic weekly backups; null = auto-backup off. */
+    val backupFolder: StateFlow<String?> = _backupFolder.asStateFlow()
+
+    fun setBackupFolder(uri: String?) {
+        prefs.edit().putString(KEY_BACKUP_FOLDER, uri).apply()
+        _backupFolder.value = uri
+    }
+
     private val _releaseRadar = MutableStateFlow(prefs.getBoolean(KEY_RELEASE_RADAR, true))
     /** Notify about new albums/singles of confidants and followed artists. */
     val releaseRadar: StateFlow<Boolean> = _releaseRadar.asStateFlow()
@@ -128,6 +168,11 @@ class AppSettings(context: Context) {
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_JAPANESE_ONLY = "japanese_only"
         const val KEY_RELEASE_RADAR = "release_radar"
+        const val KEY_BACKUP_FOLDER = "backup_folder"
+        const val KEY_EQ_ENABLED = "eq_enabled"
+        const val KEY_EQ_LEVELS = "eq_levels"
+        const val KEY_NORMALIZE = "normalize"
+        const val KEY_CROSSFADE = "crossfade"
         const val KEY_DOWNLOAD_FOLDER = "download_folder"
         const val KEY_SYNC_LIKES = "sync_likes"
         const val KEY_REPORT_HISTORY = "report_history"

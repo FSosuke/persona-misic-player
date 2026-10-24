@@ -51,6 +51,9 @@ class PlaybackService : MediaSessionService() {
     private var extendingQueue = false
     private var consecutiveErrors = 0
 
+    /** Volume parts: the sleep timer's fade-out and the between-songs fade, multiplied. */
+    private var sleepVolume = 1f
+
     // Listening-time bookkeeping for the play event of the current item.
     private var currentEvent: Deferred<Long>? = null
     private var listenedMs = 0L
@@ -97,6 +100,8 @@ class PlaybackService : MediaSessionService() {
         )
 
         scope.launch { runSleepTimer(player) }
+        scope.launch { runVolume(player) }
+        if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) container.audioEffects.attach(player.audioSessionId)
 
         session = MediaSession.Builder(this, player)
             .setSessionActivity(openApp)
@@ -115,6 +120,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         flushListened()
+        container.audioEffects.release()
         session?.run {
             player.release()
             release()
@@ -124,23 +130,43 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
+    /** Applies sleep fade and the "fade between songs" envelope to the player volume. */
+    private suspend fun runVolume(player: ExoPlayer) {
+        while (true) {
+            val fadeMs = container.settings.crossfadeSeconds.value * 1000L
+            var fade = 1f
+            if (fadeMs > 0 && player.isPlaying && player.repeatMode != Player.REPEAT_MODE_ONE) {
+                val position = player.currentPosition
+                val duration = player.duration
+                if (position < fadeMs) fade = (position.toFloat() / fadeMs).coerceIn(0.05f, 1f)
+                if (duration != C.TIME_UNSET && duration > fadeMs * 2 && player.hasNextMediaItem()) {
+                    val remaining = duration - position
+                    if (remaining < fadeMs) fade = minOf(fade, (remaining.toFloat() / fadeMs).coerceIn(0.05f, 1f))
+                }
+            }
+            val target = sleepVolume * fade
+            if (player.volume != target) player.volume = target
+            delay(100)
+        }
+    }
+
     /** Executes the [SleepTimer]: fade out and pause at the deadline, or pause at the song's end. */
     private suspend fun runSleepTimer(player: ExoPlayer) {
         container.sleepTimer.mode.collectLatest { mode ->
             player.pauseAtEndOfMediaItems = mode is SleepTimer.Mode.EndOfSong
             if (mode !is SleepTimer.Mode.At) {
-                player.volume = 1f
+                sleepVolume = 1f
                 return@collectLatest
             }
             val untilFade = mode.endsAtElapsed - SystemClock.elapsedRealtime() - FADE_MS
             if (untilFade > 0) delay(untilFade)
             val steps = 30
             for (i in steps downTo 0) {
-                player.volume = i / steps.toFloat()
+                sleepVolume = i / steps.toFloat()
                 delay(FADE_MS / steps)
             }
             player.pause()
-            player.volume = 1f
+            sleepVolume = 1f
             container.sleepTimer.cancel()
         }
     }
@@ -201,6 +227,10 @@ class PlaybackService : MediaSessionService() {
                     }
                 }
             }
+        }
+
+        override fun onAudioSessionIdChanged(audioSessionId: Int) {
+            container.audioEffects.attach(audioSessionId)
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {

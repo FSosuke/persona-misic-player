@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.fsosuke.personamusic.data.AppDatabase
 import com.fsosuke.personamusic.data.AppSettings
+import com.fsosuke.personamusic.data.AutoBackup
 import com.fsosuke.personamusic.data.BackupManager
 import com.fsosuke.personamusic.data.ContentFilter
 import com.fsosuke.personamusic.data.ListeningHistory
@@ -15,6 +16,7 @@ import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.download.DownloadManager
+import com.fsosuke.personamusic.playback.AudioEffects
 import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.release.ReleaseRadar
 import com.fsosuke.personamusic.playback.SleepTimer
@@ -63,10 +65,12 @@ class AppContainer(context: Context) {
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)
     val player = PlayerConnection(context)
     val sleepTimer = SleepTimer()
+    val audioEffects = AudioEffects(settings, appScope)
 
     /** Latest confidant rank-up, shown as an overlay until dismissed (survives the app being closed). */
     val pendingRankUp = MutableStateFlow<RankUp?>(null)
     val backup = BackupManager(context, database, settings)
+    val autoBackup = AutoBackup(context, backup, settings)
     val searchHistory = SearchHistory(context)
     val contentFilter = ContentFilter(database.musicDao(), settings, appScope)
     val history = ListeningHistory(database.musicDao())

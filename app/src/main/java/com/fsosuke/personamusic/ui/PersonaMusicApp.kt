@@ -53,6 +53,7 @@ import com.fsosuke.personamusic.ui.playlist.PlaylistDetailScreen
 import com.fsosuke.personamusic.ui.playlist.PlaylistsScreen
 import com.fsosuke.personamusic.ui.settings.CustomizeScreen
 import com.fsosuke.personamusic.ui.settings.HiddenScreen
+import com.fsosuke.personamusic.ui.settings.SoundScreen
 import com.fsosuke.personamusic.ui.stats.StatsScreen
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.youtube.YtLoginScreen
@@ -65,6 +66,7 @@ private object Routes {
     const val CONFIDANTS = "confidants"
     const val HIDDEN = "hidden"
     const val CALENDAR = "calendar"
+    const val SOUND = "sound"
     const val WRAPPED = "wrapped/{period}"
     fun wrapped(period: WrappedPeriod) = "wrapped/" + when (period) {
         is WrappedPeriod.Month -> period.month.toString()
@@ -208,12 +210,14 @@ fun PersonaMusicApp() {
                 val period = if (raw.length == 4) WrappedPeriod.Year(raw.toInt()) else WrappedPeriod.Month(YearMonth.parse(raw))
                 WrappedScreen(period, onClose = { nav.popBackStack() })
             }
+            composable(Routes.SOUND) { SoundScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.HIDDEN) { HiddenScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CONFIDANTS) { ConfidantsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CUSTOMIZE) { CustomizeScreen(
                     onBack = { nav.popBackStack() },
                     onSignIn = { nav.navigate(Routes.YT_LOGIN) },
                     onOpenHidden = { nav.navigate(Routes.HIDDEN) },
+                    onOpenSound = { nav.navigate(Routes.SOUND) },
                     contentPadding = padding,
                 ) }
         }

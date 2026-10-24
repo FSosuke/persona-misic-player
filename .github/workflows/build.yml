@@ -35,11 +35,11 @@ jobs:
             echo "::warning::KEYSTORE_BASE64 secret missing - APK is signed with a throwaway debug key"
           fi
 
-      - name: Build release APK
+      - name: Run tests and build release APK
         env:
           SIGNING_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon testReleaseUnitTest assembleRelease
           cp app/build/outputs/apk/release/app-release.apk "persona-music-$VERSION.apk"
 
       - uses: actions/upload-artifact@v4

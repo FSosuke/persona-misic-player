@@ -62,12 +62,7 @@ class LyricsRepository(private val client: OkHttpClient) {
         if (json.optBoolean("instrumental")) return Lyrics(listOf(LyricLine(null, "♪ Instrumental ♪")))
         val synced = json.optString("syncedLyrics").takeIf { it.isNotBlank() && it != "null" }
         if (synced != null) {
-            val lines = synced.lines().mapNotNull { line ->
-                val match = LRC_LINE.find(line) ?: return@mapNotNull null
-                val (min, sec, frac, text) = match.destructured
-                val fracMs = when (frac.length) { 0 -> 0L; 1 -> frac.toLong() * 100; 2 -> frac.toLong() * 10; else -> frac.take(3).toLong() }
-                LyricLine(min.toLong() * 60_000 + sec.toLong() * 1000 + fracMs, text.trim())
-            }
+            val lines = parseLrc(synced)
             if (lines.isNotEmpty()) return Lyrics(lines)
         }
         val plain = json.optString("plainLyrics").takeIf { it.isNotBlank() && it != "null" } ?: return null
@@ -79,8 +74,21 @@ class LyricsRepository(private val client: OkHttpClient) {
         .replace(Regex("\\s*[(\\[][^)\\]]*(official|video|audio|lyrics?|mv|hd|4k|remaster)[^)\\]]*[)\\]]", RegexOption.IGNORE_CASE), "")
         .trim()
 
-    private companion object {
-        const val BASE = "https://lrclib.net/api"
-        val LRC_LINE = Regex("^\\[(\\d+):(\\d{2})(?:[.:](\\d{1,3}))?]\\s*(.*)$")
+    companion object {
+        private const val BASE = "https://lrclib.net/api"
+        private val LRC_LINE = Regex("^\\[(\\d+):(\\d{2})(?:[.:](\\d{1,3}))?]\\s*(.*)$")
+
+        /** Parses "[mm:ss.xx] text" lines; lines without a timestamp are skipped. */
+        fun parseLrc(lrc: String): List<LyricLine> = lrc.lines().mapNotNull { line ->
+            val match = LRC_LINE.find(line) ?: return@mapNotNull null
+            val (min, sec, frac, text) = match.destructured
+            val fracMs = when (frac.length) {
+                0 -> 0L
+                1 -> frac.toLong() * 100
+                2 -> frac.toLong() * 10
+                else -> frac.take(3).toLong()
+            }
+            LyricLine(min.toLong() * 60_000 + sec.toLong() * 1000 + fracMs, text.trim())
+        }
     }
 }
