@@ -15,6 +15,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
 - **Better search** – live suggestions and search history while typing; results split into top result, songs, artists, albums and playlists, each with a full list tab, plus library matches.
 - **Downloads** – save YouTube songs or whole YT Music playlists as tagged M4A files into a folder you choose (or create); they play offline, show up in a *Downloads* card on the playlist board and in any other music app.
 - **Radio & autoplay** – "Start radio" on any song (local songs are matched on YouTube), and when the queue runs out it keeps going with similar songs.
+- **Widget & Android Auto** – P5-style home-screen widget with cover and controls; Android Auto can browse Recent, Favourites, Downloads, Playlists and your library.
 - **Sound** – equalizer with device presets, volume normalization (compressor + limiter, Android 9+) and fade between songs.
 - **Auto-backup** – weekly backup into a folder of your choice (keeps the last 4).
 - **Release Radar** – checks your confidants and followed artists for new albums and singles twice a day, notifies you and shows them on Home.

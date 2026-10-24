@@ -18,7 +18,18 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.common.MediaMetadata
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.LibraryParams
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
+import androidx.core.graphics.drawable.toBitmap
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import com.google.common.collect.ImmutableList
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.guava.future
 import com.fsosuke.personamusic.MainActivity
 import com.fsosuke.personamusic.PersonaApp
 import com.fsosuke.personamusic.data.Song
@@ -42,10 +53,10 @@ import kotlinx.coroutines.launch
 
 /** Background playback (no YouTube Premium needed) via a Media3 session + system media notification. */
 @OptIn(UnstableApi::class)
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var session: MediaSession? = null
+    private var session: MediaLibrarySession? = null
     private var skipJob: Job? = null
     private var historyJob: Job? = null
     private var extendingQueue = false
@@ -103,13 +114,13 @@ class PlaybackService : MediaSessionService() {
         scope.launch { runVolume(player) }
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) container.audioEffects.attach(player.audioSessionId)
 
-        session = MediaSession.Builder(this, player)
+        session = MediaLibrarySession.Builder(this, player, LibraryCallback())
             .setSessionActivity(openApp)
-            .setCallback(SessionCallback())
             .build()
+        pushWidget(player)
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = session?.player
@@ -119,6 +130,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        PlayerWidget.push(this, null, false)
         flushListened()
         container.audioEffects.release()
         session?.run {
@@ -182,17 +194,107 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    /** Media3 strips the playback uri when items travel through a controller; restore it. */
-    private inner class SessionCallback : MediaSession.Callback {
+    /**
+     * Session callback + media library for Android Auto (and other browsers): Recent,
+     * Favourites, Downloads, Playlists and the local library as browsable folders.
+     */
+    private inner class LibraryCallback : MediaLibrarySession.Callback {
+
+        /** Media3 strips the playback uri when items travel through a controller; restore it. */
         override fun onAddMediaItems(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
             mediaItems: MutableList<MediaItem>,
-        ): ListenableFuture<MutableList<MediaItem>> = Futures.immediateFuture(
+        ): ListenableFuture<MutableList<MediaItem>> = scope.future {
             mediaItems.map { item ->
-                item.requestMetadata.mediaUri?.let { item.buildUpon().setUri(it).build() } ?: item
+                item.requestMetadata.mediaUri?.let { item.buildUpon().setUri(it).build() }
+                    // Items picked in Android Auto only carry their id: look the song up.
+                    ?: container.repository.song(item.mediaId)?.toMediaItem()
+                    ?: item
             }.toMutableList()
+        }
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(LibraryResult.ofItem(folder(ROOT, "Persona Music"), params))
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = scope.future {
+            LibraryResult.ofItemList(children(parentId), params)
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String,
+        ): ListenableFuture<LibraryResult<MediaItem>> = scope.future {
+            container.repository.song(mediaId)?.let { LibraryResult.ofItem(it.toMediaItem(), null) }
+                ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+        }
+
+        /** Bluetooth / widget "play" with nothing loaded: resume with the recent songs. */
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
+            val recent = container.repository.recent(30).first()
+            MediaSession.MediaItemsWithStartPosition(recent.map { it.toMediaItem() }, 0, 0)
+        }
+    }
+
+    private suspend fun children(parentId: String): List<MediaItem> {
+        val repo = container.repository
+        return when {
+            parentId == ROOT -> listOf(
+                folder("recent", "Recently played"),
+                folder("favourites", "Favourites"),
+                folder("downloads", "Downloads"),
+                folder("playlists", "Playlists"),
+                folder("library", "Library"),
+            )
+            parentId == "recent" -> repo.recent(50).first().map { it.toMediaItem() }
+            parentId == "favourites" -> repo.likedSongs.first().map { it.toMediaItem() }
+            parentId == "downloads" -> container.downloads.downloadedSongs.first().map { it.toMediaItem() }
+            parentId == "library" -> repo.localSongs.first().take(500).map { it.toMediaItem() }
+            parentId == "playlists" -> repo.playlists.first().map { folder("playlist:${it.id}", it.name) }
+            parentId.startsWith("playlist:") ->
+                parentId.removePrefix("playlist:").toLongOrNull()?.let { id -> repo.playlistSongs(id).first().map { it.toMediaItem() } }.orEmpty()
+            else -> emptyList()
+        }
+    }
+
+    private fun folder(id: String, title: String) = MediaItem.Builder()
+        .setMediaId(id)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(title)
+                .setIsBrowsable(true)
+                .setIsPlayable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+                .build()
         )
+        .build()
+
+    /** Sends the current song and play state to the home-screen widget. */
+    private fun pushWidget(player: Player) {
+        val song = player.currentMediaItem?.toSong()
+        PlayerWidget.push(this, song, player.isPlaying)
+        val art = song?.artworkUri ?: return
+        if (PlayerWidget.hasArtFor(song.id)) return
+        scope.launch {
+            val request = ImageRequest.Builder(this@PlaybackService).data(art).size(256).allowHardware(false).build()
+            val bitmap = (imageLoader.execute(request) as? SuccessResult)?.drawable?.toBitmap(256, 256)
+            if (bitmap != null) PlayerWidget.setArt(this@PlaybackService, song.id, bitmap)
+        }
     }
 
     private inner class PlayerListener(private val player: ExoPlayer) : Player.Listener {
@@ -240,6 +342,10 @@ class PlaybackService : MediaSessionService() {
             ) {
                 container.sleepTimer.cancel()
             }
+        }
+
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.containsAny(Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_IS_PLAYING_CHANGED)) pushWidget(player)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -326,6 +432,7 @@ class PlaybackService : MediaSessionService() {
 
     private companion object {
         const val MAX_CONSECUTIVE_ERRORS = 3
+        const val ROOT = "root"
         const val HISTORY_AFTER_MS = 30_000L
         const val FADE_MS = 20_000L
         const val AUTOPLAY_THRESHOLD = 2
