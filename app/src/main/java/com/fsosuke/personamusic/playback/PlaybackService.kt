@@ -263,8 +263,9 @@ class PlaybackService : MediaSessionService() {
             extendingQueue = true
             scope.launch {
                 val queued = (0 until player.mediaItemCount).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
+                val rules = container.contentFilter.rules.value
                 val more = runCatching { container.ytLibrary.radio(seed) }.getOrDefault(emptyList())
-                    .filter { it.id !in queued }
+                    .filter { it.id !in queued && rules.allows(it) }
                     .take(AUTOPLAY_BATCH)
                 if (more.isNotEmpty()) {
                     container.repository.remember(more)

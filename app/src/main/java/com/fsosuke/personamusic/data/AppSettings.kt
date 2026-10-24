@@ -61,6 +61,15 @@ class AppSettings(context: Context) {
         _reportHistory.value = value
     }
 
+    private val _japaneseOnly = MutableStateFlow(prefs.getBoolean(KEY_JAPANESE_ONLY, false))
+    /** Only recommend / auto-play Japanese music (plus artists the user already listens to). */
+    val japaneseOnly: StateFlow<Boolean> = _japaneseOnly.asStateFlow()
+
+    fun setJapaneseOnly(value: Boolean) {
+        prefs.edit().putBoolean(KEY_JAPANESE_ONLY, value).apply()
+        _japaneseOnly.value = value
+    }
+
     private val _downloadFolder = MutableStateFlow(prefs.getString(KEY_DOWNLOAD_FOLDER, null))
     /** SAF tree uri of the folder downloads are saved to; null until the user picks one. */
     val downloadFolder: StateFlow<String?> = _downloadFolder.asStateFlow()
@@ -108,6 +117,7 @@ class AppSettings(context: Context) {
         const val KEY_SKIP_NON_MUSIC = "skip_non_music"
         const val KEY_PLAYER_BG = "player_background"
         const val KEY_AUTOPLAY = "autoplay"
+        const val KEY_JAPANESE_ONLY = "japanese_only"
         const val KEY_DOWNLOAD_FOLDER = "download_folder"
         const val KEY_SYNC_LIKES = "sync_likes"
         const val KEY_REPORT_HISTORY = "report_history"

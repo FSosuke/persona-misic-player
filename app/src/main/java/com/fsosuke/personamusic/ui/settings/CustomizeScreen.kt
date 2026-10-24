@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,7 +62,7 @@ import com.fsosuke.personamusic.ui.theme.colors
 import com.fsosuke.personamusic.update.UpdateState
 
 @Composable
-fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: PaddingValues) {
+fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -> Unit, contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
     val settings = container.settings
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
@@ -126,6 +127,9 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, contentPadding: Pa
                 if (selected) Icon(Icons.Filled.CheckCircle, null, tint = optionColors.accent)
             }
         }
+
+        item { CalloutBanner("Recommendations", Modifier.padding(start = 12.dp, top = 20.dp), pointLeft = true) }
+        item { RecommendationsSection(onOpenHidden) }
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -429,5 +433,37 @@ private fun DownloadFolderSection() {
         }
         Spacer(Modifier.width(12.dp))
         PersonaButton(if (folder == null) "Choose" else "Change", onClick = { picker.launch(null) }, inverted = true)
+    }
+}
+
+@Composable
+private fun RecommendationsSection(onOpenHidden: () -> Unit) {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val japaneseOnly by container.settings.japaneseOnly.collectAsStateWithLifecycle()
+    val hidden by container.contentFilter.blocked.collectAsStateWithLifecycle(initialValue = emptyList())
+    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SettingSwitch(
+            title = "Japanese music only",
+            description = "Home recommendations, radio and autoplay only keep songs with Japanese titles or artists – " +
+                "plus artists you already listen to or like.",
+            checked = japaneseOnly,
+            onChange = container.settings::setJapaneseOnly,
+        )
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onOpenHidden).padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Hidden songs & artists", color = Color.White, style = PersonaType.title)
+                Text(
+                    if (hidden.isEmpty()) "Use \"Not interested\" or \"Hide artist\" in any song menu."
+                    else "${hidden.size} hidden – tap to manage",
+                    color = colors.muted,
+                    style = PersonaType.caption,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(0xFF888888))
+        }
     }
 }

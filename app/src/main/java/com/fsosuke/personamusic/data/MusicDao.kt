@@ -43,6 +43,24 @@ interface MusicDao {
     )
     fun artistPlays(artist: String): Flow<Int>
 
+    // --- Hidden songs / artists ------------------------------------------------------------
+
+    @Upsert
+    suspend fun block(item: BlockedItem)
+
+    @Query("DELETE FROM blocked WHERE `key` = :key")
+    suspend fun unblock(key: String)
+
+    @Query("SELECT * FROM blocked ORDER BY createdAt DESC")
+    fun blocked(): Flow<List<BlockedItem>>
+
+    /** Artists the user evidently likes: played or hearted. They always pass the language filter. */
+    @Query(
+        "SELECT DISTINCT s.artist FROM songs s WHERE s.id IN (SELECT songId FROM play_events) " +
+            "OR s.id IN (SELECT songId FROM liked_songs)"
+    )
+    fun knownArtists(): Flow<List<String>>
+
     // --- Downloads -------------------------------------------------------------------------
 
     @Upsert

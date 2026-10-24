@@ -98,3 +98,20 @@ data class DownloadEntry(
     val sizeBytes: Long,
     val downloadedAt: Long = System.currentTimeMillis(),
 )
+
+enum class BlockType { SONG, ARTIST }
+
+/** A song or artist the user doesn't want recommended ("Not interested" / "Hide artist"). */
+@Entity(tableName = "blocked")
+data class BlockedItem(
+    /** "song:<songId>" or "artist:<lowercase name>". */
+    @PrimaryKey val key: String,
+    val type: BlockType,
+    val label: String,
+    val createdAt: Long = System.currentTimeMillis(),
+) {
+    companion object {
+        fun song(song: Song) = BlockedItem("song:${song.id}", BlockType.SONG, "${song.title} – ${song.artist}")
+        fun artist(name: String) = BlockedItem("artist:${name.lowercase()}", BlockType.ARTIST, name)
+    }
+}

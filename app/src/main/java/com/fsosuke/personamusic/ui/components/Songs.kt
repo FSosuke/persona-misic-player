@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
@@ -195,6 +197,22 @@ fun SongMenu(
                     }
                 }
             }
+            MenuEntry("Not interested", Icons.Filled.Block) {
+                onDismiss()
+                container.appScope.launch {
+                    container.contentFilter.hideSong(song)
+                    runCatching { container.ytLibrary.notInterested(song) }
+                }
+                Toast.makeText(context, "Won't recommend this song again", Toast.LENGTH_SHORT).show()
+            }
+            if (isRealArtist(song.artist)) {
+                val artist = primaryArtist(song.artist)
+                MenuEntry("Hide $artist", Icons.Filled.PersonOff) {
+                    onDismiss()
+                    container.appScope.launch { container.contentFilter.hideArtist(artist) }
+                    Toast.makeText(context, "$artist hidden from recommendations", Toast.LENGTH_SHORT).show()
+                }
+            }
             if (isRealArtist(song.artist)) {
                 MenuEntry("Go to artist", Icons.Filled.Person) {
                     onDismiss()
@@ -259,7 +277,8 @@ fun MenuEntry(text: String, icon: androidx.compose.ui.graphics.vector.ImageVecto
 fun startRadio(container: AppContainer, context: Context, song: Song) {
     Toast.makeText(context, "Tuning in to \"${song.title}\" radio…", Toast.LENGTH_SHORT).show()
     container.appScope.launch {
-        val songs = runCatching { container.ytLibrary.radio(song) }.getOrDefault(emptyList())
+        val rules = container.contentFilter.rules.value
+        val songs = runCatching { container.ytLibrary.radio(song) }.getOrDefault(emptyList()).filter { rules.allows(it) }
         container.repository.remember(songs + song)
         withContext(Dispatchers.Main) {
             if (songs.isEmpty()) {

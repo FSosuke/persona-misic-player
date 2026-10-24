@@ -322,6 +322,26 @@ class YtMusicLibrary(
     private suspend fun videoIdFor(song: Song): String? =
         song.youtubeId ?: runCatching { youTube.searchSongs("${song.title} ${song.artist}").firstOrNull()?.youtubeId }.getOrNull()
 
+    // --- "Not interested" feedback ---------------------------------------------------------
+
+    /** videoId → YouTube's "not interested" feedback token, collected while parsing feeds. */
+    private val feedbackTokens = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun captureFeedback(renderer: JSONObject, videoId: String) {
+        val token = findAll(renderer.obj("menu"), "menuServiceItemRenderer")
+            .firstOrNull { it.str("icon", "iconType") == "NOT_INTERESTED" }
+            ?.str("serviceEndpoint", "feedbackEndpoint", "feedbackToken")
+            ?: return
+        feedbackTokens[videoId] = token
+    }
+
+    /** Tells YouTube Music the user isn't interested in [song], if YouTube offered that option for it. */
+    suspend fun notInterested(song: Song) {
+        val cookie = accounts.cookie ?: return
+        val token = song.youtubeId?.let { feedbackTokens[it] } ?: return
+        api.post("feedback", cookie, JSONObject().put("feedbackTokens", JSONArray().put(token)))
+    }
+
     // --- Sync (writes to the signed-in account) --------------------------------------------
 
     /** Mirrors the in-app heart to "Liked music" on YouTube Music. */
@@ -398,7 +418,9 @@ class YtMusicLibrary(
         val subtitleRuns = r.obj("subtitle")?.optJSONArray("runs")?.objects().orEmpty()
         val thumbnail = bestThumbnail(r.arr("thumbnailRenderer", "musicThumbnailRenderer", "thumbnail", "thumbnails"))
         val endpoint = r.obj("navigationEndpoint") ?: return null
-        return itemFromEndpoint(endpoint, title, r.obj("subtitle").runsText(), subtitleRuns, thumbnail)
+        val item = itemFromEndpoint(endpoint, title, r.obj("subtitle").runsText(), subtitleRuns, thumbnail)
+        if (item is YtItem.SongItem) item.song.youtubeId?.let { captureFeedback(r, it) }
+        return item
     }
 
     /** Turns a navigation endpoint (+ display data) into a song, collection or artist. */
@@ -451,6 +473,7 @@ class YtMusicLibrary(
             ?: r.str("overlay", "musicItemThumbnailOverlayRenderer", "content", "musicPlayButtonRenderer", "playNavigationEndpoint", "watchEndpoint", "videoId")
             ?: firstRuns.str(0, "navigationEndpoint", "watchEndpoint", "videoId")
             ?: return null
+        captureFeedback(r, videoId)
         val title = columns.firstOrNull().runsText() ?: return null
         val otherRuns = columns.drop(1).flatMap { it?.optJSONArray("runs")?.objects().orEmpty() }
         val artists = otherRuns.filter { pageType(it) == ARTIST }.joinToString(", ") { it.optString("text") }

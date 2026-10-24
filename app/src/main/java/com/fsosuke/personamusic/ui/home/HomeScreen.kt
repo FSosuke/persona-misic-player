@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fsosuke.personamusic.data.Confidant
+import com.fsosuke.personamusic.data.ContentFilter
 import com.fsosuke.personamusic.data.LoggedPlay
 import com.fsosuke.personamusic.ui.confidant.ArcanaCard
 import com.fsosuke.personamusic.data.Song
@@ -105,6 +106,8 @@ fun HomeScreen(
     val currentId = playerState.current?.id
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
     val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
+    val filterRules by container.contentFilter.rules.collectAsStateWithLifecycle()
+    val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
 
     LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
 
@@ -187,7 +190,7 @@ fun HomeScreen(
                         }
                     }
                 }
-                itemsIndexed(ytFeed.home, key = { i, shelf -> "shelf-$i-${shelf.title}" }) { i, shelf ->
+                itemsIndexed(homeShelves, key = { i, shelf -> "shelf-$i-${shelf.title}" }) { i, shelf ->
                     YtShelf(
                         shelf = shelf,
                         index = i,
