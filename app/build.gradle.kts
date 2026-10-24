@@ -57,7 +57,7 @@ android {
         buildConfig = true
     }
     packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/CONTRIBUTORS.md", "META-INF/LICENSE.md", "META-INF/NOTICE.md")
     }
 }
 
