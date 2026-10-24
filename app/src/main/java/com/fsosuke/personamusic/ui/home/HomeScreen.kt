@@ -53,6 +53,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fsosuke.personamusic.data.Confidant
+import com.fsosuke.personamusic.data.WrappedPeriod
+import java.time.LocalDate
+import java.time.YearMonth
+import androidx.compose.runtime.produceState
 import com.fsosuke.personamusic.data.ContentFilter
 import com.fsosuke.personamusic.data.LoggedPlay
 import com.fsosuke.personamusic.ui.confidant.ArcanaCard
@@ -66,6 +70,8 @@ import com.fsosuke.personamusic.ui.components.StampLabel
 import com.fsosuke.personamusic.ui.components.EmptyState
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaButton
+import com.fsosuke.personamusic.ui.components.slantShape
+import com.fsosuke.personamusic.ui.components.RansomText
 import com.fsosuke.personamusic.ui.components.PersonaHeader
 import com.fsosuke.personamusic.ui.components.PersonaSearchField
 import com.fsosuke.personamusic.ui.components.SongRow
@@ -84,6 +90,8 @@ fun HomeScreen(
     onOpenYtPlaylist: (String) -> Unit,
     onSignIn: () -> Unit,
     onOpenConfidants: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenWrapped: (WrappedPeriod) -> Unit,
     contentPadding: PaddingValues,
 ) {
     val container = LocalAppContainer.current
@@ -184,6 +192,16 @@ fun HomeScreen(
                 onRetry = { container.ytLibrary.loadJapan(force = true) },
             )
         } else if (!typing && !showHistory && submitted.isBlank()) {
+            item { WrappedBanner(onOpenWrapped) }
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true)
+                    PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) })
+                }
+            }
             if (ytAccount != null) {
                 if (ytFeed.home.isEmpty() && ytFeed.loading) {
                     item {
@@ -482,5 +500,55 @@ private fun ConfidantsSection(confidants: List<Confidant>, onAll: () -> Unit) {
             style = PersonaType.label.copy(fontSize = 14.sp),
             modifier = Modifier.align(Alignment.End).clickable(onClick = onAll).padding(horizontal = 20.dp, vertical = 6.dp),
         )
+    }
+}
+
+/**
+ * In the first week of a month: "Your <last month> Wrapped is ready" – once per month,
+ * and only if there is something to look back on.
+ */
+@Composable
+private fun WrappedBanner(onOpenWrapped: (WrappedPeriod) -> Unit) {
+    val container = LocalAppContainer.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val today = remember { LocalDate.now() }
+    val lastMonth = remember { YearMonth.from(today).minusMonths(1) }
+    val prefs = remember { context.getSharedPreferences("wrapped", android.content.Context.MODE_PRIVATE) }
+    var dismissed by remember { mutableStateOf(prefs.getBoolean("seen-$lastMonth", false)) }
+    val hasData by produceState(false, lastMonth) {
+        val first = container.history.firstPlayDate()
+        value = first != null && first.isBefore(lastMonth.plusMonths(1).atDay(1))
+    }
+    if (dismissed || today.dayOfMonth > 7 || !hasData) return
+    val period = WrappedPeriod.Month(lastMonth)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .rotate(-1.5f)
+            .background(Color.White, slantShape(0.02f))
+            .padding(4.dp)
+            .background(Color.Black, slantShape(0.02f))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        RansomText("Wrapped is here", fontSize = 22.sp)
+        Text("Your ${period.title} heist report is ready.", color = Color.White, style = PersonaType.body)
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            PersonaButton("Open", onClick = {
+                prefs.edit().putBoolean("seen-$lastMonth", true).apply()
+                dismissed = true
+                onOpenWrapped(period)
+            })
+            Text(
+                "LATER",
+                color = Color(0xFFAAAAAA),
+                style = PersonaType.label,
+                modifier = Modifier.clickable {
+                    prefs.edit().putBoolean("seen-$lastMonth", true).apply()
+                    dismissed = true
+                }.padding(8.dp),
+            )
+        }
     }
 }

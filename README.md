@@ -15,6 +15,8 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
 - **Better search** – live suggestions and search history while typing; results split into top result, songs, artists, albums and playlists, each with a full list tab, plus library matches.
 - **Downloads** – save YouTube songs or whole YT Music playlists as tagged M4A files into a folder you choose (or create); they play offline, show up in a *Downloads* card on the playlist board and in any other music app.
 - **Radio & autoplay** – "Start radio" on any song (local songs are matched on YouTube), and when the queue runs out it keeps going with similar songs.
+- **Calendar** – Persona-style calendar: a month heat map of your listening and each day's log split into Early Morning, Daytime, After School, Evening and Late Night.
+- **Wrapped** – monthly and yearly recap as a story slideshow: minutes listened, top confidant with arcana, top songs and artists, habits (favourite time, busiest day, streak, new artists) and a calling card to share.
 - **Japan tab on Home** – YouTube Music charts for Japan (ranked top songs, trending, top artists) and Japanese new releases (albums, singles, music videos).
 - **Your taste, your rules** – "Not interested" / "Hide artist" in every song menu (also sent to YouTube Music when possible) and a *Japanese music only* switch that filters recommendations, radio and autoplay; hidden items can be restored in Customize.
 - **Confidants** – every artist you listen to becomes a confidant with a Major Arcana; ranks 1–MAX grow with your plays, with a spinning "RANK UP!" card when they level up and a confidant overview.

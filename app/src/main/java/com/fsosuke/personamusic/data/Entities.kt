@@ -115,3 +115,20 @@ data class BlockedItem(
         fun artist(name: String) = BlockedItem("artist:${name.lowercase()}", BlockType.ARTIST, name)
     }
 }
+
+/** One play with its song, for calendar / Wrapped calculations. */
+data class PlayRecord(
+    @Embedded val song: Song,
+    val playedAt: Long,
+    val listenedMs: Long,
+)
+
+data class PlayStamp(
+    val playedAt: Long,
+    val listenedMs: Long,
+)
+
+data class ArtistFirstPlay(
+    val name: String,
+    val firstPlayed: Long,
+)

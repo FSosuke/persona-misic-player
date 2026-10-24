@@ -32,7 +32,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.fsosuke.personamusic.data.WrappedPeriod
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
+import com.fsosuke.personamusic.ui.calendar.CalendarScreen
+import com.fsosuke.personamusic.ui.wrapped.WrappedScreen
+import java.time.YearMonth
 import com.fsosuke.personamusic.ui.confidant.ConfidantsScreen
 import com.fsosuke.personamusic.ui.confidant.RankUpOverlay
 import com.fsosuke.personamusic.ui.download.DownloadsScreen
@@ -60,6 +64,12 @@ private object Routes {
     const val DOWNLOADS = "downloads"
     const val CONFIDANTS = "confidants"
     const val HIDDEN = "hidden"
+    const val CALENDAR = "calendar"
+    const val WRAPPED = "wrapped/{period}"
+    fun wrapped(period: WrappedPeriod) = "wrapped/" + when (period) {
+        is WrappedPeriod.Month -> period.month.toString()
+        is WrappedPeriod.Year -> period.year.toString()
+    }
     const val ARTIST = "artist?name={name}&id={id}"
     fun artist(name: String, id: String?) = "artist?name=${Uri.encode(name)}" + (id?.let { "&id=${Uri.encode(it)}" } ?: "")
     const val STATS = "stats"
@@ -81,7 +91,7 @@ fun PersonaMusicApp() {
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val position by container.player.positionMs.collectAsStateWithLifecycle()
 
-    val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE
+    val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE && route != Routes.WRAPPED
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
         ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS) Tab.Playlists else null
 
@@ -113,6 +123,8 @@ fun PersonaMusicApp() {
                     onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
                     onSignIn = { nav.navigate(Routes.YT_LOGIN) },
                     onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
+                    onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
+                    onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
                     contentPadding = padding,
                 )
             }
@@ -177,7 +189,24 @@ fun PersonaMusicApp() {
             }
             composable(Routes.DOWNLOADS) { DownloadsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.STATS) {
-                StatsScreen(onBack = { nav.popBackStack() }, onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) }, contentPadding = padding)
+                StatsScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
+                    onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
+                    contentPadding = padding,
+                )
+            }
+            composable(Routes.CALENDAR) {
+                CalendarScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
+                    contentPadding = padding,
+                )
+            }
+            composable(Routes.WRAPPED, arguments = listOf(navArgument("period") { type = NavType.StringType })) { entry ->
+                val raw = entry.arguments?.getString("period").orEmpty()
+                val period = if (raw.length == 4) WrappedPeriod.Year(raw.toInt()) else WrappedPeriod.Month(YearMonth.parse(raw))
+                WrappedScreen(period, onClose = { nav.popBackStack() })
             }
             composable(Routes.HIDDEN) { HiddenScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CONFIDANTS) { ConfidantsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }

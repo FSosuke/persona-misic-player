@@ -7,6 +7,7 @@ import com.fsosuke.personamusic.data.AppDatabase
 import com.fsosuke.personamusic.data.AppSettings
 import com.fsosuke.personamusic.data.BackupManager
 import com.fsosuke.personamusic.data.ContentFilter
+import com.fsosuke.personamusic.data.ListeningHistory
 import com.fsosuke.personamusic.data.LocalMusicScanner
 import com.fsosuke.personamusic.data.LyricsRepository
 import com.fsosuke.personamusic.data.MusicRepository
@@ -65,6 +66,7 @@ class AppContainer(context: Context) {
     val backup = BackupManager(context, database, settings)
     val searchHistory = SearchHistory(context)
     val contentFilter = ContentFilter(database.musicDao(), settings, appScope)
+    val history = ListeningHistory(database.musicDao())
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
 

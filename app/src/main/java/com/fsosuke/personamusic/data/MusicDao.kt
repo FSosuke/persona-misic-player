@@ -43,6 +43,29 @@ interface MusicDao {
     )
     fun artistPlays(artist: String): Flow<Int>
 
+    // --- Calendar & Wrapped ----------------------------------------------------------------
+
+    @Query("SELECT playedAt, listenedMs FROM play_events WHERE playedAt >= :from AND playedAt < :to")
+    fun playStamps(from: Long, to: Long): Flow<List<PlayStamp>>
+
+    @Query(
+        "SELECT s.*, e.playedAt AS playedAt, e.listenedMs AS listenedMs FROM play_events e JOIN songs s ON s.id = e.songId " +
+            "WHERE e.playedAt >= :from AND e.playedAt < :to ORDER BY e.playedAt"
+    )
+    fun playsBetween(from: Long, to: Long): Flow<List<PlayRecord>>
+
+    @Query(
+        "SELECT s.*, e.playedAt AS playedAt, e.listenedMs AS listenedMs FROM play_events e JOIN songs s ON s.id = e.songId " +
+            "WHERE e.playedAt >= :from AND e.playedAt < :to ORDER BY e.playedAt"
+    )
+    suspend fun playsBetweenNow(from: Long, to: Long): List<PlayRecord>
+
+    @Query("SELECT s.artist AS name, MIN(e.playedAt) AS firstPlayed FROM play_events e JOIN songs s ON s.id = e.songId GROUP BY s.artist")
+    suspend fun artistFirstPlays(): List<ArtistFirstPlay>
+
+    @Query("SELECT MIN(playedAt) FROM play_events")
+    suspend fun firstPlayAt(): Long?
+
     // --- Hidden songs / artists ------------------------------------------------------------
 
     @Upsert
