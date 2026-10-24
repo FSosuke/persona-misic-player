@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fsosuke.personamusic.data.Confidant
+import com.fsosuke.personamusic.youtube.HomeShelf
+import com.fsosuke.personamusic.youtube.YtItem
 import com.fsosuke.personamusic.data.WrappedPeriod
 import java.time.LocalDate
 import java.time.YearMonth
@@ -111,6 +113,7 @@ fun HomeScreen(
     val mostPlayed by vm.mostPlayed.collectAsStateWithLifecycle()
     val songLog by vm.songLog.collectAsStateWithLifecycle()
     val confidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
+    val newReleases by container.releaseRadar.releases.collectAsStateWithLifecycle()
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val currentId = playerState.current?.id
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
@@ -200,6 +203,17 @@ fun HomeScreen(
                 ) {
                     PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true)
                     PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) })
+                }
+            }
+            if (newReleases.isNotEmpty()) {
+                item {
+                    YtShelf(
+                        shelf = HomeShelf("New from your confidants", newReleases.map { YtItem.Collection(it.toPlaylist()) }),
+                        index = 1,
+                        currentSongId = currentId,
+                        onPlay = { songs, index -> play(songs, index) },
+                        onOpenCollection = onOpenYtPlaylist,
+                    )
                 }
             }
             if (ytAccount != null) {

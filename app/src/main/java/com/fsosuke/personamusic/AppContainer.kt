@@ -16,6 +16,7 @@ import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.download.DownloadManager
 import com.fsosuke.personamusic.playback.PlayerConnection
+import com.fsosuke.personamusic.release.ReleaseRadar
 import com.fsosuke.personamusic.playback.SleepTimer
 import com.fsosuke.personamusic.data.RankUp
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +70,7 @@ class AppContainer(context: Context) {
     val searchHistory = SearchHistory(context)
     val contentFilter = ContentFilter(database.musicDao(), settings, appScope)
     val history = ListeningHistory(database.musicDao())
+    val releaseRadar = ReleaseRadar(context, ytLibrary, database.musicDao(), settings)
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
 

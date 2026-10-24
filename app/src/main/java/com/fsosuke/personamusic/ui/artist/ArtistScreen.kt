@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -87,6 +88,7 @@ fun ArtistScreen(
     val local by remember(name) { container.repository.localSongsByArtist(name) }.collectAsStateWithLifecycle(initialValue = emptyList())
     val plays by remember(name) { container.repository.artistPlays(name) }.collectAsStateWithLifecycle(initialValue = 0)
     val playerState by container.player.state.collectAsStateWithLifecycle()
+    val followed by container.releaseRadar.followed.collectAsStateWithLifecycle()
     val page = (online as? ArtistState.Loaded)?.page
     val displayName = page?.name ?: name
     val confidant = Confidants.of(displayName, plays)
@@ -157,6 +159,27 @@ fun ArtistScreen(
                     Text("$plays plays", color = Color.White, style = PersonaType.body)
                     Text("Confidant", color = colors.muted, style = PersonaType.caption)
                 }
+            }
+        }
+
+        item {
+            val following = followed.any { it.equals(displayName, ignoreCase = true) }
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PersonaButton(
+                    if (following) "✓ Following" else "+ Follow",
+                    onClick = { container.releaseRadar.toggleFollow(displayName) },
+                    inverted = !following,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    if (following) "New releases show up in Release Radar." else "Get notified about new releases.",
+                    color = colors.muted,
+                    style = PersonaType.caption,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
 

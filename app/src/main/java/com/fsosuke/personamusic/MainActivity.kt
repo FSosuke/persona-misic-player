@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        container.releaseRadar.schedule()
+
         setContent {
             val theme by container.settings.theme.collectAsStateWithLifecycle()
             CompositionLocalProvider(LocalAppContainer provides container) {

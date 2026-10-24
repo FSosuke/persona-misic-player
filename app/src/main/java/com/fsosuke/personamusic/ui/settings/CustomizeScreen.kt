@@ -130,6 +130,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -
 
         item { CalloutBanner("Recommendations", Modifier.padding(start = 12.dp, top = 20.dp), pointLeft = true) }
         item { RecommendationsSection(onOpenHidden) }
+        item { ReleaseRadarSection() }
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -464,6 +465,39 @@ private fun RecommendationsSection(onOpenHidden: () -> Unit) {
                 )
             }
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(0xFF888888))
+        }
+    }
+}
+
+@Composable
+private fun ReleaseRadarSection() {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val scope = rememberCoroutineScope()
+    val enabled by container.settings.releaseRadar.collectAsStateWithLifecycle()
+    val checking by container.releaseRadar.checking.collectAsStateWithLifecycle()
+    val followed by container.releaseRadar.followed.collectAsStateWithLifecycle()
+    var result by remember { mutableStateOf<String?>(null) }
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingSwitch(
+            title = "Release Radar",
+            description = "Notifies you about new albums and singles of your confidants (rank 2+) and of artists you follow " +
+                "(${followed.size} followed – use \"Follow\" on an artist page).",
+            checked = enabled,
+            onChange = container.settings::setReleaseRadar,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PersonaButton(if (checking) "Checking…" else "Check now", onClick = {
+                if (!checking) scope.launch {
+                    val found = runCatching { container.releaseRadar.check() }
+                    result = found.fold(
+                        { if (it.isEmpty()) "Nothing new right now." else "${it.size} new: " + it.take(3).joinToString { r -> r.title } },
+                        { "Check failed: ${it.localizedMessage}" },
+                    )
+                }
+            }, inverted = true)
+            Spacer(Modifier.width(12.dp))
+            result?.let { Text(it, color = colors.muted, style = PersonaType.caption, modifier = Modifier.weight(1f)) }
         }
     }
 }
