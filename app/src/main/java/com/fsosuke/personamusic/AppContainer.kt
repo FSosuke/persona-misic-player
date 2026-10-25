@@ -68,6 +68,7 @@ class AppContainer(context: Context) {
     val dictionary = Dictionary(httpClient)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
+    val radiko = com.fsosuke.personamusic.radio.Radiko(context, httpClient)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope) { settings.homeRegion.value.ifEmpty { null } }
     val player = PlayerConnection(context)
     val sleepTimer = SleepTimer()

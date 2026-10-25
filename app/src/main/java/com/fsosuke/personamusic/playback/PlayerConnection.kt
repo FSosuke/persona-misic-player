@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.radio.RadikoStation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -118,7 +119,15 @@ class PlayerConnection(private val context: Context) {
         play()
     }
 
-    fun playNext(song: Song) = withController {
+    /** Replaces the queue with a live radiko station. */
+    fun playRadio(station: RadikoStation) = withController {
+        shuffleModeEnabled = false
+        setMediaItem(station.toSong().toMediaItem())
+        prepare()
+        play()
+    }
+
+        fun playNext(song: Song) = withController {
         if (mediaItemCount == 0) {
             setMediaItem(song.toMediaItem())
             prepare()

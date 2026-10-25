@@ -35,6 +35,7 @@ import androidx.navigation.navArgument
 import com.fsosuke.personamusic.data.SmartPlaylist
 import com.fsosuke.personamusic.data.WrappedPeriod
 import com.fsosuke.personamusic.ui.playlist.SmartPlaylistScreen
+import com.fsosuke.personamusic.ui.radio.RadioScreen
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
 import com.fsosuke.personamusic.ui.calendar.CalendarScreen
 import com.fsosuke.personamusic.ui.wrapped.WrappedScreen
@@ -138,6 +139,7 @@ fun PersonaMusicApp() {
                 )
             }
             composable(Tab.Library.route) { LibraryScreen(contentPadding = padding) }
+            composable(Tab.Radio.route) { RadioScreen(contentPadding = padding) }
             composable(Tab.Playlists.route) {
                 PlaylistsScreen(
                     onOpen = { nav.navigate(Routes.playlist(it)) },

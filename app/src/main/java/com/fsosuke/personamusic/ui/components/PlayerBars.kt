@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,6 +102,7 @@ enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     Home("home", "Home", Icons.Filled.Home),
     Library("library", "Library", Icons.Filled.LibraryMusic),
     Playlists("playlists", "Playlist", Icons.Filled.Folder),
+    Radio("radio", "Radio", Icons.Filled.Radio),
 }
 
 @Composable

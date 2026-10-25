@@ -27,3 +27,9 @@ All fonts come from Google Fonts and may be bundled and redistributed in apps.
 
 All Persona-style graphics (stars, slashes, sparkles, gloves, icons) are drawn in code for this
 project. No ATLUS/SEGA artwork, logos or fonts are included.
+
+## rajiko
+
+The radiko login flow (app-style authentication with a GPS location in the chosen area) and the
+key file in `app/src/main/assets/radiko/` follow rajiko by jackyzy823
+(https://github.com/jackyzy823/rajiko), released into the public domain (Unlicense).

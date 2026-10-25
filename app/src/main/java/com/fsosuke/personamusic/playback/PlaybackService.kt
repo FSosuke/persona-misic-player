@@ -28,12 +28,14 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.google.common.collect.ImmutableList
+import java.io.IOException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
 import com.fsosuke.personamusic.MainActivity
 import com.fsosuke.personamusic.PersonaApp
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.youtube.LiveStreamException
+import com.fsosuke.personamusic.radio.Radiko
 import com.fsosuke.personamusic.youtube.NewPipeDownloader
 import com.fsosuke.personamusic.youtube.SponsorBlock
 import com.fsosuke.personamusic.youtube.YouTubeMusic
@@ -84,6 +86,13 @@ class PlaybackService : MediaLibraryService() {
                 // Downloaded songs play from the saved file: offline and without using data.
                 val file = container.downloads.uriFor(Song.YT_PREFIX + videoId)
                 spec.withUri(Uri.parse(file ?: youTube.resolveStreamUrl(videoId)))
+            } else if (spec.uri.scheme == Radiko.SCHEME) {
+                val (station, area) = Radiko.parseUri(spec.uri) ?: throw IOException("Bad radiko uri ${spec.uri}")
+                container.radiko.activeArea = area
+                spec.withUri(Uri.parse(container.radiko.streamUrl(station))).withAdditionalHeaders(container.radiko.streamHeaders(area))
+            } else if (Radiko.isStreamHost(spec.uri.host)) {
+                // Variant playlists and segments of a radiko stream need the token too.
+                spec.withAdditionalHeaders(container.radiko.streamHeaders())
             } else {
                 spec
             }
@@ -207,7 +216,11 @@ class PlaybackService : MediaLibraryService() {
             mediaItems: MutableList<MediaItem>,
         ): ListenableFuture<MutableList<MediaItem>> = scope.future {
             mediaItems.map { item ->
-                item.requestMetadata.mediaUri?.let { item.buildUpon().setUri(it).build() }
+                item.requestMetadata.mediaUri?.let { uri ->
+                    item.buildUpon().setUri(uri)
+                        .apply { if (uri.scheme == Radiko.SCHEME) setMimeType(MimeTypes.APPLICATION_M3U8) }
+                        .build()
+                }
                     // Items picked in Android Auto only carry their id: look the song up.
                     ?: container.repository.song(item.mediaId)?.toMediaItem()
                     ?: item
@@ -307,6 +320,7 @@ class PlaybackService : MediaLibraryService() {
             playingSince = if (player.isPlaying) SystemClock.elapsedRealtime() else null
             historyJob?.cancel()
             mediaItem ?: return
+            if (mediaItem.mediaId.startsWith(Radiko.ID_PREFIX)) return
             currentEvent = scope.async(Dispatchers.IO) {
                 container.repository.logPlay(mediaItem.mediaId).also {
                     container.repository.rankUpAfterPlay(mediaItem.toSong())?.let { container.pendingRankUp.value = it }

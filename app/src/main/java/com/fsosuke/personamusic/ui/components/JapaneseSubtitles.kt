@@ -23,6 +23,8 @@ object JapaneseSubtitles {
         "now playing" to "再生中",
         "sign in" to "ログイン",
         "search" to "検索",
+        "radio" to "ラジオ",
+        "on air" to "放送中",
         "yt music" to "YouTubeミュージック",
         // Home & sections
         "recent" to "最近の再生",

@@ -144,6 +144,15 @@ class AppSettings(context: Context) {
         _homeRegion.value = value
     }
 
+    private val _radikoArea = MutableStateFlow(prefs.getString(KEY_RADIKO_AREA, "JP4") ?: "JP4")
+    /** radiko area shown in the Radio tab (Sendai by default). */
+    val radikoArea: StateFlow<String> = _radikoArea.asStateFlow()
+
+    fun setRadikoArea(value: String) {
+        prefs.edit().putString(KEY_RADIKO_AREA, value).apply()
+        _radikoArea.value = value
+    }
+
     private val _japaneseOnly = MutableStateFlow(prefs.getBoolean(KEY_JAPANESE_ONLY, false))
     /** Only recommend / auto-play Japanese music (plus artists the user already listens to). */
     val japaneseOnly: StateFlow<Boolean> = _japaneseOnly.asStateFlow()
@@ -202,6 +211,7 @@ class AppSettings(context: Context) {
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_JAPANESE_ONLY = "japanese_only"
         const val KEY_HOME_REGION = "home_region"
+        const val KEY_RADIKO_AREA = "radiko_area"
         const val KEY_RELEASE_RADAR = "release_radar"
         const val KEY_BACKUP_FOLDER = "backup_folder"
         const val KEY_EQ_ENABLED = "eq_enabled"
