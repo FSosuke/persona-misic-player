@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.settings
 
+import com.fsosuke.personamusic.CrashLog
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -289,6 +291,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -
         item { DownloadFolderSection() }
         item { UpdatesSection() }
         item { BackupSection() }
+        item { CrashSection() }
         item { Watermark() }
         item { Spacer(Modifier.height(24.dp)) }
     }
@@ -315,6 +318,32 @@ private fun BackgroundRow(label: String, path: String?, tint: Color?, onPick: ()
 }
 
 /** The author's calling-card signature at the bottom of the settings. */
+/** Shows up only after a crash: share the report or dismiss it. */
+@Composable
+private fun CrashSection() {
+    val context = LocalContext.current
+    val colors = LocalPersonaColors.current
+    var report by remember { mutableStateOf(CrashLog.read(context)) }
+    val text = report ?: return
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Crash report", color = Color.White, style = PersonaType.title)
+        Text(
+            text.lineSequence().take(2).joinToString(" · ") + "\n" +
+                text.lineSequence().drop(5).firstOrNull().orEmpty(),
+            color = colors.muted,
+            style = PersonaType.caption,
+            maxLines = 4,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PersonaButton("Share", onClick = {
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+                context.startActivity(Intent.createChooser(send, "Share crash report"))
+            })
+            PersonaButton("Dismiss", onClick = { CrashLog.clear(context); report = null }, inverted = true)
+        }
+    }
+}
+
 @Composable
 private fun Watermark() {
     val context = LocalContext.current
