@@ -7,18 +7,17 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import java.io.IOException
-import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Line-by-line lyric translation into the phone's language, using Google Translate's public
+ * Line-by-line lyric translation into the chosen language (English by default), using Google Translate's public
  * web endpoint (no key needed). Results are cached per song.
  */
-class Translator(private val client: OkHttpClient) {
+class Translator(private val client: OkHttpClient, private val settings: AppSettings) {
 
     private val cache = ConcurrentHashMap<String, List<String>>()
 
-    val targetLanguage: String get() = Locale.getDefault().language.ifEmpty { "en" }
+    val targetLanguage: String get() = settings.translateTo.value
 
     suspend fun translate(cacheKey: String, lines: List<String>): List<String> = withContext(Dispatchers.IO) {
         val key = "$cacheKey|$targetLanguage"

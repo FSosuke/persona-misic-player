@@ -59,7 +59,7 @@ class AppContainer(context: Context) {
     val youTube = YouTubeMusic(httpClient, settings)
     val sponsorBlock = SponsorBlock(httpClient)
     val lyrics = LyricsRepository(httpClient)
-    val translator = Translator(httpClient)
+    val translator = Translator(httpClient, settings)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)

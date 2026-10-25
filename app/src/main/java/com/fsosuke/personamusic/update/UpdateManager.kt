@@ -109,8 +109,8 @@ class UpdateManager(
             .build()
         client.newCall(request).execute().use { response ->
             // GitHub answers 404 both for "no release yet" and for private repositories.
-            if (response.code == 404) throw IOException("Update-Quelle nicht erreichbar (Repository privat oder noch kein Release)")
-            if (!response.isSuccessful) throw IOException("GitHub antwortet mit HTTP ${response.code}")
+            if (response.code == 404) throw IOException("Update source unreachable (private repository or no release yet)")
+            if (!response.isSuccessful) throw IOException("GitHub answered HTTP ${response.code}")
             val json = JSONObject(response.body?.string().orEmpty())
             val version = json.optString("tag_name").removePrefix("v")
             val assets = json.optJSONArray("assets")
@@ -129,8 +129,8 @@ class UpdateManager(
         dir.listFiles()?.forEach { it.delete() }
         val target = File(dir, "persona-music-${update.version}.apk")
         client.newCall(Request.Builder().url(update.apkUrl).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Download fehlgeschlagen (HTTP ${response.code})")
-            val body = response.body ?: throw IOException("Leere Antwort")
+            if (!response.isSuccessful) throw IOException("Download failed (HTTP ${response.code})")
+            val body = response.body ?: throw IOException("Empty response")
             val total = body.contentLength().takeIf { it > 0 }
             body.byteStream().use { input ->
                 target.outputStream().use { output ->

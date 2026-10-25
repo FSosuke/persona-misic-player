@@ -140,6 +140,9 @@ fun PersonaBottomBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier
                     Box(Modifier.background(Color.Black).padding(horizontal = 4.dp)) {
                         Text(tab.label.uppercase(), color = Color.White, style = PersonaType.label.copy(fontSize = 12.sp))
                     }
+                    JapaneseSubtitles.of(tab.label)?.let {
+                        Text(it, color = Color.White.copy(alpha = 0.75f), style = PersonaType.caption.copy(fontSize = 8.sp))
+                    }
                 }
             }
         }

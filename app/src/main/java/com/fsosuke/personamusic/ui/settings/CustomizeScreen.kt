@@ -143,6 +143,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -
         item { CalloutBanner("Recommendations", Modifier.padding(start = 12.dp, top = 20.dp), pointLeft = true) }
         item { RecommendationsSection(onOpenHidden) }
         item { ReleaseRadarSection() }
+        item { TranslationSection() }
 
         item {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -541,6 +542,30 @@ private fun ReleaseRadarSection() {
             }, inverted = true)
             Spacer(Modifier.width(12.dp))
             result?.let { Text(it, color = colors.muted, style = PersonaType.caption, modifier = Modifier.weight(1f)) }
+        }
+    }
+}
+
+@Composable
+private fun TranslationSection() {
+    val settings = LocalAppContainer.current.settings
+    val colors = LocalPersonaColors.current
+    val target by settings.translateTo.collectAsStateWithLifecycle()
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Translate lyrics into", color = Color.White, style = PersonaType.title)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf("en" to "English", "de" to "Deutsch").forEach { (code, label) ->
+                val selected = code == target
+                Box(
+                    Modifier
+                        .rotate(if (selected) -3f else 0f)
+                        .background(if (selected) colors.accent else Color(0xFF222222), slantShape(0.08f))
+                        .clickable { settings.setTranslateTo(code) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(label, color = if (selected) colors.onAccent else Color.White, style = PersonaType.body)
+                }
+            }
         }
     }
 }

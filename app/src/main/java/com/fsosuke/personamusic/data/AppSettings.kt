@@ -61,6 +61,15 @@ class AppSettings(context: Context) {
         _reportHistory.value = value
     }
 
+    private val _translateTo = MutableStateFlow(prefs.getString(KEY_TRANSLATE_TO, "en") ?: "en")
+    /** Target language of lyric translations ("en" or "de"). */
+    val translateTo: StateFlow<String> = _translateTo.asStateFlow()
+
+    fun setTranslateTo(value: String) {
+        prefs.edit().putString(KEY_TRANSLATE_TO, value).apply()
+        _translateTo.value = value
+    }
+
     private val _eqEnabled = MutableStateFlow(prefs.getBoolean(KEY_EQ_ENABLED, false))
     val eqEnabled: StateFlow<Boolean> = _eqEnabled.asStateFlow()
     private val _eqLevels = MutableStateFlow(prefs.getString(KEY_EQ_LEVELS, "").orEmpty())
@@ -170,6 +179,7 @@ class AppSettings(context: Context) {
         const val KEY_RELEASE_RADAR = "release_radar"
         const val KEY_BACKUP_FOLDER = "backup_folder"
         const val KEY_EQ_ENABLED = "eq_enabled"
+        const val KEY_TRANSLATE_TO = "translate_to"
         const val KEY_EQ_LEVELS = "eq_levels"
         const val KEY_NORMALIZE = "normalize"
         const val KEY_CROSSFADE = "crossfade"

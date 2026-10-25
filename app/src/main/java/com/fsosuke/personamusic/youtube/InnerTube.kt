@@ -47,7 +47,7 @@ class InnerTube(private val client: OkHttpClient, context: Context) {
             .build()
         client.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) throw IOException("YouTube Music antwortet mit HTTP ${response.code}")
+            if (!response.isSuccessful) throw IOException("YouTube Music answered HTTP ${response.code}")
             JSONObject(text)
         }
     }

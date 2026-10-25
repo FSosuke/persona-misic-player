@@ -125,12 +125,12 @@ fun YtLoginScreen(onDone: () -> Unit, onBack: () -> Unit) {
             onDismissRequest = { manual = false },
             containerColor = Color.Black,
             shape = RectangleShape,
-            title = { Text("Cookie einfügen", color = Color.White, style = PersonaType.title) },
+            title = { Text("Paste cookie", color = Color.White, style = PersonaType.title) },
             text = {
                 Column {
                     Text(
-                        "Falls die Google-Anmeldung hier blockiert wird: Melde dich am PC auf music.youtube.com an, " +
-                            "kopiere aus den Entwicklertools den kompletten \"Cookie\"-Header einer Anfrage und füge ihn hier ein.",
+                        "If Google blocks the sign-in here: sign in to music.youtube.com on a computer, " +
+                            "copy the full \"Cookie\" request header from the developer tools and paste it here.",
                         color = colors.muted,
                         style = PersonaType.caption,
                     )
@@ -142,9 +142,9 @@ fun YtLoginScreen(onDone: () -> Unit, onBack: () -> Unit) {
                 TextButton(onClick = {
                     manual = false
                     submit(text.trim().removePrefix("Cookie:").trim())
-                }) { Text("Anmelden") }
+                }) { Text("Sign in") }
             },
-            dismissButton = { TextButton(onClick = { manual = false }) { Text("Abbrechen") } },
+            dismissButton = { TextButton(onClick = { manual = false }) { Text("Cancel") } },
         )
     }
 }

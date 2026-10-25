@@ -41,10 +41,10 @@ class YtAccountManager(context: Context, private val innerTube: InnerTube) {
 
     /** Validates [cookie] against the account menu and stores it on success. */
     suspend fun signIn(cookie: String): YtAccount {
-        if (!InnerTube.hasAuthCookie(cookie)) throw IOException("Kein Login-Cookie (SAPISID) gefunden")
+        if (!InnerTube.hasAuthCookie(cookie)) throw IOException("No login cookie (SAPISID) found")
         val menu = innerTube.post("account/account_menu", cookie, JSONObject())
         val header = findFirst(menu, "activeAccountHeaderRenderer")
-            ?: throw IOException("Login nicht erkannt – bitte erneut anmelden")
+            ?: throw IOException("Login not recognised – please sign in again")
         val account = YtAccount(
             name = header.obj("accountName").runsText() ?: "YouTube Music",
             handle = header.obj("channelHandle").runsText(),

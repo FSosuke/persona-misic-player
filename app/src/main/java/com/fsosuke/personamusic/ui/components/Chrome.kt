@@ -56,14 +56,18 @@ fun PersonaHeader(
         Box(Modifier.fillMaxWidth().starPattern(colors.patternBackground, colors.pattern)) {
             Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, bottom = 12.dp)) {
                 Box(Modifier.fillMaxWidth().height(72.dp)) {
-                    Box(
-                        Modifier
-                            .align(Alignment.Center)
-                            .rotate(-3f)
-                            .background(Color.Black)
-                            .padding(horizontal = 12.dp, vertical = 2.dp),
+                    Column(
+                        Modifier.align(Alignment.Center).rotate(-3f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        RansomText(title, fontSize = 40.sp, style = RansomStyle.Outline)
+                        Box(Modifier.background(Color.Black).padding(horizontal = 12.dp, vertical = 2.dp)) {
+                            RansomText(title, fontSize = 40.sp, style = RansomStyle.Outline)
+                        }
+                        JapaneseSubtitles.of(title)?.let { jp ->
+                            Box(Modifier.background(LocalPersonaColors.current.accent).padding(horizontal = 8.dp)) {
+                                Text(jp, color = LocalPersonaColors.current.onAccent, style = PersonaType.caption.copy(fontSize = 11.sp, letterSpacing = 2.sp))
+                            }
+                        }
                     }
                     if (action != null) {
                         Box(Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) { action() }
@@ -167,8 +171,13 @@ fun DashedSectionTitle(title: String, modifier: Modifier = Modifier) {
     ) {
         Text("—  —  —", color = Color.White, fontWeight = FontWeight.Black)
         Spacer(Modifier.width(12.dp))
-        Box(Modifier.rotate(-2f).border(2.dp, Color.White).background(Color.Black).padding(horizontal = 6.dp, vertical = 2.dp)) {
-            RansomText(title, fontSize = 24.sp, style = RansomStyle.Outline)
+        Column(Modifier.rotate(-2f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.border(2.dp, Color.White).background(Color.Black).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                RansomText(title, fontSize = 24.sp, style = RansomStyle.Outline)
+            }
+            JapaneseSubtitles.of(title)?.let {
+                Text(it, color = Color(0xFFBDBDBD), style = PersonaType.caption.copy(fontSize = 10.sp, letterSpacing = 2.sp))
+            }
         }
         Spacer(Modifier.width(12.dp))
         Text("—  —  —", color = Color.White, fontWeight = FontWeight.Black)
@@ -191,7 +200,12 @@ fun CalloutBanner(text: String, modifier: Modifier = Modifier, pointLeft: Boolea
             .background(Color.Black, outer)
             .padding(start = 28.dp, end = 36.dp, top = 10.dp, bottom = 18.dp),
     ) {
-        Text(text.uppercase(), color = Color.White, style = PersonaType.label.copy(fontSize = 20.sp))
+        Column {
+            Text(text.uppercase(), color = Color.White, style = PersonaType.label.copy(fontSize = 20.sp))
+            JapaneseSubtitles.of(text)?.let {
+                Text(it, color = Color.White.copy(alpha = 0.7f), style = PersonaType.caption.copy(fontSize = 10.sp, letterSpacing = 2.sp))
+            }
+        }
     }
 }
 

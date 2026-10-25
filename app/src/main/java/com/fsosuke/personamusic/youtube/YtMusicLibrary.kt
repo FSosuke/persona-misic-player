@@ -420,8 +420,8 @@ class YtMusicLibrary(
         _feed.value.playlists.filter { it.id.startsWith("VL") && it.id != LIKED_ID }
 
     suspend fun addToPlaylist(playlist: YtPlaylist, song: Song) {
-        val cookie = accounts.cookie ?: throw IOException("Nicht bei YouTube Music angemeldet")
-        val videoId = videoIdFor(song) ?: throw IOException("Song nicht auf YouTube Music gefunden")
+        val cookie = accounts.cookie ?: throw IOException("Not signed in to YouTube Music")
+        val videoId = videoIdFor(song) ?: throw IOException("Song not found on YouTube Music")
         val action = JSONObject().put("action", "ACTION_ADD_VIDEO").put("addedVideoId", videoId)
         val result = api.post(
             "browse/edit_playlist",
@@ -429,13 +429,13 @@ class YtMusicLibrary(
             JSONObject().put("playlistId", playlist.id.removePrefix("VL")).put("actions", JSONArray().put(action)),
         )
         if (result.optString("status") != "STATUS_SUCCEEDED") {
-            throw IOException("\"${playlist.title}\" kann nicht bearbeitet werden")
+            throw IOException("\"${playlist.title}\" can't be edited")
         }
     }
 
     suspend fun createPlaylist(title: String, song: Song) {
-        val cookie = accounts.cookie ?: throw IOException("Nicht bei YouTube Music angemeldet")
-        val videoId = videoIdFor(song) ?: throw IOException("Song nicht auf YouTube Music gefunden")
+        val cookie = accounts.cookie ?: throw IOException("Not signed in to YouTube Music")
+        val videoId = videoIdFor(song) ?: throw IOException("Song not found on YouTube Music")
         api.post(
             "playlist/create",
             cookie,

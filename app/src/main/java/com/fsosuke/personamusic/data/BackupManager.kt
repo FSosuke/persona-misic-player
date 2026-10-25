@@ -49,16 +49,16 @@ class BackupManager(
                     .put("skipNonMusic", settings.skipNonMusic.value),
             )
         context.contentResolver.openOutputStream(target, "wt")?.use { it.write(json.toString().toByteArray()) }
-            ?: throw IOException("Datei konnte nicht geschrieben werden")
+            ?: throw IOException("Could not write the file")
         Summary(songs.size, playlists.size, events.size)
     }
 
     /** Merges a backup into the current library; existing data is kept, duplicates are skipped. */
     suspend fun import(source: Uri): Summary = withContext(Dispatchers.IO) {
         val text = context.contentResolver.openInputStream(source)?.use { it.readBytes().decodeToString() }
-            ?: throw IOException("Datei konnte nicht gelesen werden")
+            ?: throw IOException("Could not read the file")
         val json = JSONObject(text)
-        if (json.optString("format") != FORMAT) throw IOException("Das ist kein Persona-Music-Backup")
+        if (json.optString("format") != FORMAT) throw IOException("This is not a Persona Music backup")
 
         val songs = json.optJSONArray("songs").objects().mapNotNull { it.toSong() }
         val playlists = json.optJSONArray("playlists").objects()

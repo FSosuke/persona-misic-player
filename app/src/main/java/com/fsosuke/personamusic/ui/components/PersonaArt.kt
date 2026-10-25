@@ -206,7 +206,7 @@ fun StampLabel(top: String, bottom: String?, modifier: Modifier = Modifier, tilt
 /** Small black box label in comic lettering ("PLAYING", "NEXT"). */
 @Composable
 fun ShoutLabel(text: String, modifier: Modifier = Modifier, tilt: Float = -4f) {
-    Box(
+    Column(
         modifier
             .rotate(tilt)
             .background(Color.White)
@@ -215,6 +215,7 @@ fun ShoutLabel(text: String, modifier: Modifier = Modifier, tilt: Float = -4f) {
             .padding(horizontal = 8.dp),
     ) {
         Text(text.uppercase(), color = Color.White, style = PersonaType.shout)
+        JapaneseSubtitles.of(text)?.let { Text(it, color = Color.White.copy(alpha = 0.7f), style = PersonaType.caption.copy(fontSize = 9.sp)) }
     }
 }
 
