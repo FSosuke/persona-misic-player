@@ -1,5 +1,10 @@
 package com.fsosuke.personamusic.ui.home
 
+import androidx.compose.foundation.lazy.items
+import com.fsosuke.personamusic.radio.RadikoStation
+import com.fsosuke.personamusic.radio.Radiko
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -123,6 +128,7 @@ fun HomeScreen(
     var homeTab by rememberSaveable { mutableStateOf(HomeTab.ForYou) }
     val japanFeed by container.ytLibrary.japan.collectAsStateWithLifecycle()
     LaunchedEffect(homeTab) { if (homeTab == HomeTab.Japan) container.ytLibrary.loadJapan() }
+    val radioStations by container.radioFavourites.stations.collectAsStateWithLifecycle()
     val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
 
     LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
@@ -206,6 +212,9 @@ fun HomeScreen(
                     item { PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) }) }
                     item { PersonaButton("★ Social stats", onClick = onOpenSocial, inverted = true) }
                 }
+            }
+            if (radioStations.isNotEmpty()) {
+                item { YourStations(radioStations, playingId = currentId) { container.player.playRadio(it) } }
             }
             if (newReleases.isNotEmpty()) {
                 item {
@@ -565,6 +574,46 @@ private fun WrappedBanner(onOpenWrapped: (WrappedPeriod) -> Unit) {
                     dismissed = true
                 }.padding(8.dp),
             )
+        }
+    }
+}
+
+/** Favourite radio stations as logo cards; tap to listen live. */
+@Composable
+private fun YourStations(stations: List<RadikoStation>, playingId: String?, onPlay: (RadikoStation) -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column {
+        DashedSectionTitle("Your stations", Modifier.padding(horizontal = 20.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            items(stations.size, key = { stations[it].id }) { i ->
+                val station = stations[i]
+                val playing = playingId == Radiko.ID_PREFIX + station.id
+                Column(
+                    Modifier
+                        .width(132.dp)
+                        .rotate(if (i % 2 == 0) -2f else 2f)
+                        .background(if (playing) colors.accent else Color.Black, slantShape(0.05f))
+                        .border(2.dp, Color.White, slantShape(0.05f))
+                        .clickable { onPlay(station) }
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(Modifier.fillMaxWidth().height(50.dp).background(Color.White, slantShape(0.06f)).padding(4.dp)) {
+                        AsyncImage(station.logo, contentDescription = station.name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (playing) "LIVE · ${station.name}" else station.name,
+                        color = if (playing) colors.onAccent else Color.White,
+                        style = PersonaType.caption,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }

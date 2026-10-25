@@ -36,6 +36,11 @@ import com.fsosuke.personamusic.data.SmartPlaylist
 import com.fsosuke.personamusic.data.WrappedPeriod
 import com.fsosuke.personamusic.ui.playlist.SmartPlaylistScreen
 import com.fsosuke.personamusic.ui.radio.RadioScreen
+import com.fsosuke.personamusic.ui.radio.RadioScheduleScreen
+import com.fsosuke.personamusic.radio.RadikoStation
+import com.fsosuke.personamusic.radio.toJson
+import com.fsosuke.personamusic.radio.toStation
+import org.json.JSONObject
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
 import com.fsosuke.personamusic.ui.calendar.CalendarScreen
 import com.fsosuke.personamusic.ui.wrapped.WrappedScreen
@@ -74,6 +79,8 @@ private object Routes {
     const val SOUND = "sound"
     const val SOCIAL = "social"
     const val SMART = "smart/{id}"
+    const val RADIO_SCHEDULE = "radio_schedule?station={station}"
+    fun radioSchedule(station: RadikoStation) = "radio_schedule?station=" + Uri.encode(station.toJson().toString())
     const val WRAPPED = "wrapped/{period}"
     fun wrapped(period: WrappedPeriod) = "wrapped/" + when (period) {
         is WrappedPeriod.Month -> period.month.toString()
@@ -102,7 +109,8 @@ fun PersonaMusicApp() {
 
     val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE && route != Routes.WRAPPED
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
-        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS || route == Routes.SMART) Tab.Playlists else null
+        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS || route == Routes.SMART) Tab.Playlists
+        else if (route == Routes.RADIO_SCHEDULE) Tab.Radio else null
 
     var chromeHeightPx by remember { mutableIntStateOf(0) }
     val chromeHeight = with(LocalDensity.current) { chromeHeightPx.toDp() }
@@ -139,7 +147,13 @@ fun PersonaMusicApp() {
                 )
             }
             composable(Tab.Library.route) { LibraryScreen(contentPadding = padding) }
-            composable(Tab.Radio.route) { RadioScreen(contentPadding = padding) }
+            composable(Tab.Radio.route) {
+                RadioScreen(contentPadding = padding, onOpenSchedule = { nav.navigate(Routes.radioSchedule(it)) })
+            }
+            composable(Routes.RADIO_SCHEDULE, arguments = listOf(navArgument("station") { type = NavType.StringType })) { entry ->
+                val station = entry.arguments?.getString("station")?.let { runCatching { JSONObject(it).toStation() }.getOrNull() }
+                if (station != null) RadioScheduleScreen(station, onBack = { nav.popBackStack() }, contentPadding = padding)
+            }
             composable(Tab.Playlists.route) {
                 PlaylistsScreen(
                     onOpen = { nav.navigate(Routes.playlist(it)) },

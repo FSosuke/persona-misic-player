@@ -70,6 +70,9 @@ class AppContainer(context: Context) {
     val ytAccounts = YtAccountManager(context, innerTube)
     val radiko = com.fsosuke.personamusic.radio.Radiko(context, httpClient)
     val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope) { settings.homeRegion.value.ifEmpty { null } }
+    val radioFavourites = com.fsosuke.personamusic.radio.RadioFavourites(context)
+    val radioReminders = com.fsosuke.personamusic.radio.RadioReminders(context)
+    val radioFinds = com.fsosuke.personamusic.radio.RadioFinds(repository, ytLibrary) { setLiked(it, true) }
     val player = PlayerConnection(context)
     val sleepTimer = SleepTimer()
     val audioEffects = AudioEffects(settings, appScope)

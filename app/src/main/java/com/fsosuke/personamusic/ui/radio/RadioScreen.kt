@@ -1,6 +1,18 @@
 package com.fsosuke.personamusic.ui.radio
 
 import androidx.compose.foundation.background
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.Icons
+import android.widget.Toast
 import com.fsosuke.personamusic.radio.RadikoRegion
 import com.fsosuke.personamusic.radio.Radiko
 import com.fsosuke.personamusic.data.Song
@@ -67,7 +79,7 @@ private const val ALL_JAPAN = "ALL"
 
 /** Japanese live radio from radiko: one prefecture or all of Japan. */
 @Composable
-fun RadioScreen(contentPadding: PaddingValues) {
+fun RadioScreen(contentPadding: PaddingValues, onOpenSchedule: (RadikoStation) -> Unit) {
     val container = LocalAppContainer.current
     val colors = LocalPersonaColors.current
     val areaId by container.settings.radikoArea.collectAsStateWithLifecycle()
@@ -77,6 +89,40 @@ fun RadioScreen(contentPadding: PaddingValues) {
     var attempt by remember { mutableIntStateOf(0) }
     var state by remember(areaId) { mutableStateOf<RadioState>(RadioState.Loading) }
     var picking by remember { mutableStateOf(false) }
+    val favourites by container.radioFavourites.stations.collectAsStateWithLifecycle()
+    val savedFinds by container.radioFinds.saved.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    @Composable
+    fun StationItem(station: RadikoStation, index: Int, group: String) {
+        val playing = playerState.current?.id == Radiko.ID_PREFIX + station.id
+        val nowPlaying = playerState.current?.takeIf { playing && it.title != station.name }
+        val songArtist = nowPlaying?.artist?.removeSuffix(" · ${station.name}")
+        StationCard(
+            station,
+            index,
+            playing,
+            nowPlaying = nowPlaying,
+            showArea = (allJapan || group == "Favourites") && !station.nationwide,
+            favourite = favourites.any { it.id == station.id },
+            songSaved = nowPlaying != null && container.radioFinds.key(nowPlaying.title, songArtist) in savedFinds,
+            onToggleFavourite = { container.radioFavourites.toggle(station) },
+            onSchedule = { onOpenSchedule(station) },
+            onSaveSong = {
+                nowPlaying?.let { song ->
+                    scope.launch {
+                        val found = runCatching { container.radioFinds.save(song.title, songArtist) }.getOrNull()
+                        Toast.makeText(
+                            context,
+                            if (found != null) "Saved \"${found.title}\" to Radio finds" else "Couldn't find \"${song.title}\" on YouTube Music",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            },
+        ) { container.player.playRadio(station) }
+    }
 
     LaunchedEffect(areaId, attempt) {
         state = RadioState.Loading
@@ -113,6 +159,15 @@ fun RadioScreen(contentPadding: PaddingValues) {
                 AreaChip("Prefecture…", "都道府県", selected = false) { picking = true }
             }
         }
+        if (favourites.isNotEmpty()) {
+            val loaded = (state as? RadioState.Loaded)?.stations.orEmpty()
+            item(key = "header-favourites") {
+                ShoutLabel("Favourites", Modifier.padding(start = 24.dp, top = 10.dp, bottom = 6.dp))
+            }
+            itemsIndexed(favourites, key = { _, st -> "fav-${st.id}" }) { index, station ->
+                StationItem(loaded.firstOrNull { it.id == station.id } ?: station, index, "Favourites")
+            }
+        }
         when (val s = state) {
             RadioState.Loading -> item {
                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
@@ -137,14 +192,7 @@ fun RadioScreen(contentPadding: PaddingValues) {
                         ShoutLabel(title, Modifier.padding(start = 24.dp, top = 10.dp, bottom = 6.dp))
                     }
                     itemsIndexed(stations, key = { _, st -> "$title-${st.id}" }) { index, station ->
-                        val playing = playerState.current?.id == Radiko.ID_PREFIX + station.id
-                        StationCard(
-                            station,
-                            index,
-                            playing,
-                            nowPlaying = playerState.current?.takeIf { playing && it.title != station.name },
-                            showArea = allJapan && !station.nationwide,
-                        ) { container.player.playRadio(station) }
+                        StationItem(station, index, title)
                     }
                 }
                 item {
@@ -234,6 +282,11 @@ private fun StationCard(
     playing: Boolean,
     nowPlaying: Song?,
     showArea: Boolean,
+    favourite: Boolean,
+    songSaved: Boolean,
+    onToggleFavourite: () -> Unit,
+    onSchedule: () -> Unit,
+    onSaveSong: () -> Unit,
     onClick: () -> Unit,
 ) {
     val colors = LocalPersonaColors.current
@@ -305,9 +358,30 @@ private fun StationCard(
                 }
             }
         }
-        if (playing) {
-            Spacer(Modifier.width(8.dp))
-            Text("LIVE", color = colors.onAccent, style = PersonaType.label)
+        val iconTint = if (playing) colors.onAccent else Color.White
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (playing) Text("LIVE", color = colors.onAccent, style = PersonaType.label)
+            Row {
+                if (nowPlaying != null) {
+                    IconButton(onClick = onSaveSong, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (songSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Save song to Radio finds",
+                            tint = iconTint,
+                        )
+                    }
+                }
+                IconButton(onClick = onToggleFavourite, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        if (favourite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                        contentDescription = if (favourite) "Remove from favourites" else "Add to favourites",
+                        tint = if (favourite && !playing) colors.accent else iconTint,
+                    )
+                }
+                IconButton(onClick = onSchedule, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Filled.CalendarMonth, contentDescription = "Programme", tint = iconTint)
+                }
+            }
         }
     }
 }

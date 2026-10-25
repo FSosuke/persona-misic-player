@@ -33,6 +33,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
   - **Smart playlists** that fill themselves: On repeat, Forgotten favourites, Late-night mix and Fresh finds. Save any of them, your queue or a YouTube Music playlist as a local playlist.
   - **Auto-download favourites**: liked YouTube songs are saved offline in the background (optionally Wi-Fi only).
   - **Radio tab (ラジオ)**: Japanese live radio from radiko – any of the 47 prefectures or all of Japan by region, with the programme and the song on air right now, also from outside Japan (login method of rajiko).
+  - Star your **favourite stations** (top of the Radio tab, on Home and in Android Auto), browse each station's **programme guide (番組表)** with 5-minute reminders, and heart a song on air to save it to **Radio finds** (matched on YouTube Music and liked).
   - **Per-song stats** – times played, real listening time, average per play.
   - **Your own backgrounds** – pick any image for the player/home; it gets inked and tinted P5-style.
 - **Home** – Recent, Most Played, Song Log and a 3×3 Speed Dial built from your listening history.

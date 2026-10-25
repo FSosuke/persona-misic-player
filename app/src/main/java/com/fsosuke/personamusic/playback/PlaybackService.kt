@@ -223,6 +223,7 @@ class PlaybackService : MediaLibraryService() {
                 }
                     // Items picked in Android Auto only carry their id: look the song up.
                     ?: container.repository.song(item.mediaId)?.toMediaItem()
+                    ?: favouriteStation(item.mediaId)?.toSong()?.toMediaItem()
                     ?: item
             }.toMutableList()
         }
@@ -250,7 +251,8 @@ class PlaybackService : MediaLibraryService() {
             browser: MediaSession.ControllerInfo,
             mediaId: String,
         ): ListenableFuture<LibraryResult<MediaItem>> = scope.future {
-            container.repository.song(mediaId)?.let { LibraryResult.ofItem(it.toMediaItem(), null) }
+            (container.repository.song(mediaId) ?: favouriteStation(mediaId)?.toSong())
+                ?.let { LibraryResult.ofItem(it.toMediaItem(), null) }
                 ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
         }
 
@@ -264,18 +266,23 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
+    private fun favouriteStation(mediaId: String) =
+        container.radioFavourites.stations.value.firstOrNull { Radiko.ID_PREFIX + it.id == mediaId }
+
     private suspend fun children(parentId: String): List<MediaItem> {
         val repo = container.repository
         return when {
             parentId == ROOT -> listOf(
                 folder("recent", "Recently played"),
                 folder("favourites", "Favourites"),
+                folder("radio", "Radio"),
                 folder("downloads", "Downloads"),
                 folder("playlists", "Playlists"),
                 folder("library", "Library"),
             )
             parentId == "recent" -> repo.recent(50).first().map { it.toMediaItem() }
             parentId == "favourites" -> repo.likedSongs.first().map { it.toMediaItem() }
+            parentId == "radio" -> container.radioFavourites.stations.value.map { it.toSong().toMediaItem() }
             parentId == "downloads" -> container.downloads.downloadedSongs.first().map { it.toMediaItem() }
             parentId == "library" -> repo.localSongs.first().take(500).map { it.toMediaItem() }
             parentId == "playlists" -> repo.playlists.first().map { folder("playlist:${it.id}", it.name) }

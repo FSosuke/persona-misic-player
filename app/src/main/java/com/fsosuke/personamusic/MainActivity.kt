@@ -1,6 +1,7 @@
 package com.fsosuke.personamusic
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fsosuke.personamusic.radio.RadioReminders
 import com.fsosuke.personamusic.ui.PersonaMusicApp
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.theme.PersonaMusicTheme
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
         container.releaseRadar.schedule()
         container.autoBackup.schedule()
         container.autoDownload.schedule()
+        if (savedInstanceState == null) playStationFrom(intent)
 
         setContent {
             val theme by container.settings.theme.collectAsStateWithLifecycle()
@@ -45,6 +48,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        playStationFrom(intent)
+    }
+
+    /** "Listen" on a radio reminder. */
+    private fun playStationFrom(intent: Intent?) {
+        RadioReminders.stationFrom(intent)?.let { container.player.playRadio(it) }
     }
 
     override fun onStart() {

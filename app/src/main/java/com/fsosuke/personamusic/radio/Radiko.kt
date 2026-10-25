@@ -109,6 +109,11 @@ data class RadikoProgram(
     val start: LocalDateTime?,
     val end: LocalDateTime?,
 ) {
+    fun isOnAir(now: LocalDateTime = Radiko.nowInJapan()) =
+        (start == null || !now.isBefore(start)) && (end == null || now.isBefore(end))
+
+    fun isOver(now: LocalDateTime = Radiko.nowInJapan()) = end != null && !now.isBefore(end)
+
     val timeRange: String?
         get() = if (start != null && end != null) "${start.format(CLOCK)}–${end.format(CLOCK)}" else null
 
@@ -258,6 +263,15 @@ class Radiko(private val context: Context, private val http: OkHttpClient) {
         }.getOrNull()
     }
 
+    /** A station's programme for one broadcast day ([Radiko.broadcastDay]). */
+    suspend fun schedule(stationId: String, day: java.time.LocalDate): List<RadikoProgram> = withContext(Dispatchers.IO) {
+        val date = day.format(DateTimeFormatter.BASIC_ISO_DATE)
+        get("https://radiko.jp/v3/program/station/date/$date/$stationId.xml").use { response ->
+            if (!response.isSuccessful) throw IOException("radiko programme: HTTP ${response.code}")
+            parseProgramList(response.body!!.byteStream()).filter { it.first == stationId }.map { it.second }
+        }
+    }
+
     /** HLS playlist for a live station. Blocking. */
     fun streamUrl(stationId: String): String = streamUrls.getOrPut(stationId) {
         val base = runCatching {
@@ -336,9 +350,10 @@ class Radiko(private val context: Context, private val http: OkHttpClient) {
 
         private val STATION_FIELDS = setOf("id", "name", "ascii_name", "logo")
 
-        internal fun parsePrograms(input: InputStream, now: LocalDateTime = LocalDateTime.now(java.time.ZoneId.of("Asia/Tokyo"))): Map<String, RadikoProgram> {
+        /** All programmes in a radiko programme XML, in order, with their station ids. */
+        internal fun parseProgramList(input: InputStream): List<Pair<String, RadikoProgram>> {
             val parser = Xml.newPullParser().apply { setInput(input, "UTF-8") }
-            val result = mutableMapOf<String, RadikoProgram>()
+            val result = mutableListOf<Pair<String, RadikoProgram>>()
             var stationId: String? = null
             var start: LocalDateTime? = null
             var end: LocalDateTime? = null
@@ -359,21 +374,33 @@ class Radiko(private val context: Context, private val http: OkHttpClient) {
                     XmlPullParser.END_TAG -> if (parser.name == "prog" && inProgram) {
                         inProgram = false
                         val id = stationId ?: continue
-                        val program = RadikoProgram(
+                        result += id to RadikoProgram(
                             title = fields["title"].orEmpty(),
                             performer = fields["pfm"]?.takeIf { it.isNotBlank() },
                             image = fields["img"]?.takeIf { it.isNotBlank() },
                             start = start,
                             end = end,
                         )
-                        // The feed may list neighbouring programs too: keep the one on air.
-                        val onAir = (start == null || !now.isBefore(start)) && (end == null || now.isBefore(end))
-                        if (onAir || id !in result) result[id] = program
                     }
                 }
             }
             return result
         }
+
+        internal fun parsePrograms(input: InputStream, now: LocalDateTime = nowInJapan()): Map<String, RadikoProgram> {
+            val result = mutableMapOf<String, RadikoProgram>()
+            parseProgramList(input).forEach { (id, program) ->
+                // The feed may list neighbouring programmes too: keep the one on air.
+                if (program.isOnAir(now) || id !in result) result[id] = program
+            }
+            return result
+        }
+
+        fun nowInJapan(): LocalDateTime = LocalDateTime.now(java.time.ZoneId.of("Asia/Tokyo"))
+
+        /** radiko's broadcast day runs from 5:00 to 29:00 JST. */
+        fun broadcastDay(now: LocalDateTime = nowInJapan()): java.time.LocalDate =
+            if (now.hour < 5) now.toLocalDate().minusDays(1) else now.toLocalDate()
 
         /** The live (not time-free) playlist_create_url, preferring regional over area-free servers. */
         internal fun parseLiveUrl(input: InputStream): String? {

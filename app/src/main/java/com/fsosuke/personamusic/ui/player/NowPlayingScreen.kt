@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.player
 
+import com.fsosuke.personamusic.playback.isRadio
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -101,6 +103,7 @@ fun NowPlayingScreen(
     val download = rememberDownloadAction()
     val savedDownloads by container.downloads.downloaded.collectAsStateWithLifecycle()
     val isDownloaded = song != null && song.id in savedDownloads
+    val radioFinds by container.radioFinds.saved.collectAsStateWithLifecycle()
     val liked by remember(song?.id) { container.repository.isLiked(song?.id ?: "") }
         .collectAsStateWithLifecycle(initialValue = false)
 
@@ -189,12 +192,37 @@ fun NowPlayingScreen(
                     Text(song.title, color = Color.White, style = PersonaType.title.copy(fontSize = 21.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     ArtistText(song.artist, color = Color(0xFFBDBDBD), style = PersonaType.body)
                 }
-                ChunkyIcon(
-                    if (liked) Chunky.HeartFilled else Chunky.Heart,
-                    size = 30.dp,
-                    fill = if (liked) colors.accent else Color.White,
-                    onClick = { scope.launch { container.setLiked(song, !liked) } },
-                )
+                if (song.isRadio) {
+                    // On the radio the heart saves the song on air to "Radio finds".
+                    val stationName = song.album.orEmpty()
+                    val onAir = song.title != stationName
+                    val artist = song.artist.removeSuffix(" · $stationName")
+                    val saved = onAir && container.radioFinds.key(song.title, artist) in radioFinds
+                    if (onAir) {
+                        ChunkyIcon(
+                            if (saved) Chunky.HeartFilled else Chunky.Heart,
+                            size = 30.dp,
+                            fill = if (saved) colors.accent else Color.White,
+                            onClick = {
+                                if (!saved) scope.launch {
+                                    val found = runCatching { container.radioFinds.save(song.title, artist) }.getOrNull()
+                                    Toast.makeText(
+                                        context,
+                                        if (found != null) "Saved \"${found.title}\" to Radio finds" else "Couldn't find it on YouTube Music",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                        )
+                    }
+                } else {
+                    ChunkyIcon(
+                        if (liked) Chunky.HeartFilled else Chunky.Heart,
+                        size = 30.dp,
+                        fill = if (liked) colors.accent else Color.White,
+                        onClick = { scope.launch { container.setLiked(song, !liked) } },
+                    )
+                }
                 Spacer(Modifier.width(10.dp))
                 ChunkyIcon(Chunky.Lyrics, size = 34.dp, onClick = { overlay = PlayerOverlay.Lyrics })
             }

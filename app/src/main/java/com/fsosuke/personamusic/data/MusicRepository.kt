@@ -50,6 +50,7 @@ class MusicRepository(
         }
     }
 
+    suspend fun playlistIdByName(name: String) = dao.playlistIdByName(name)
     suspend fun createPlaylist(name: String): Long = dao.insertPlaylist(Playlist(name = name))
     suspend fun renamePlaylist(id: Long, name: String) = dao.renamePlaylist(id, name)
     suspend fun deletePlaylist(id: Long) {
