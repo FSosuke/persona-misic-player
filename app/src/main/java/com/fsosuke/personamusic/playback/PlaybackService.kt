@@ -310,6 +310,42 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
+    private var radioJob: Job? = null
+    private var radioMediaId: String? = null
+
+    /**
+     * While a radiko station plays, keep its metadata current: the song on air (title, artist,
+     * cover) or else the programme – so the player, notification and widget show what's on.
+     */
+    private suspend fun followRadio(player: ExoPlayer, mediaId: String) {
+        val stationId = mediaId.removePrefix(Radiko.ID_PREFIX)
+        while (true) {
+            val item = player.currentMediaItem?.takeIf { it.mediaId == mediaId } ?: return
+            val area = item.requestMetadata.mediaUri?.let { Radiko.parseUri(it)?.second }
+            val stationName = item.mediaMetadata.albumTitle?.toString() ?: stationId
+            val logo = "https://radiko.jp/v2/static/station/logo/$stationId/224x100.png"
+            val song = runCatching { container.radiko.currentSong(stationId) }.getOrNull()
+            val program = area?.let { runCatching { container.radiko.nowOnAir(it)[stationId] }.getOrNull() }
+            val programText = program?.let { p -> listOfNotNull(p.title.ifBlank { null }, p.performer).joinToString(" · ") }
+            val (title, artist, art) = if (song != null) {
+                Triple(song.title, listOfNotNull(song.artist, stationName).joinToString(" · "), song.image ?: program?.image ?: logo)
+            } else {
+                Triple(stationName, programText?.ifBlank { null } ?: item.mediaMetadata.artist?.toString(), program?.image ?: logo)
+            }
+            val old = item.mediaMetadata
+            if (old.title?.toString() != title || old.artist?.toString() != artist || old.artworkUri?.toString() != art) {
+                val index = player.currentMediaItemIndex
+                player.replaceMediaItem(
+                    index,
+                    item.buildUpon().setMediaMetadata(
+                        old.buildUpon().setTitle(title).setArtist(artist).setArtworkUri(android.net.Uri.parse(art)).build(),
+                    ).build(),
+                )
+            }
+            delay(RADIO_POLL_MS)
+        }
+    }
+
     private inner class PlayerListener(private val player: ExoPlayer) : Player.Listener {
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -320,7 +356,16 @@ class PlaybackService : MediaLibraryService() {
             playingSince = if (player.isPlaying) SystemClock.elapsedRealtime() else null
             historyJob?.cancel()
             mediaItem ?: return
-            if (mediaItem.mediaId.startsWith(Radiko.ID_PREFIX)) return
+            if (mediaItem.mediaId.startsWith(Radiko.ID_PREFIX)) {
+                if (radioJob?.isActive != true || radioMediaId != mediaItem.mediaId) {
+                    radioJob?.cancel()
+                    radioMediaId = mediaItem.mediaId
+                    radioJob = scope.launch { followRadio(player, mediaItem.mediaId) }
+                }
+                return
+            }
+            radioJob?.cancel()
+            radioMediaId = null
             currentEvent = scope.async(Dispatchers.IO) {
                 container.repository.logPlay(mediaItem.mediaId).also {
                     container.repository.rankUpAfterPlay(mediaItem.toSong())?.let { container.pendingRankUp.value = it }
@@ -446,6 +491,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private companion object {
+        const val RADIO_POLL_MS = 30_000L
         const val MAX_CONSECUTIVE_ERRORS = 3
         const val ROOT = "root"
         const val HISTORY_AFTER_MS = 30_000L

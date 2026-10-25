@@ -55,7 +55,8 @@ fun RadikoStation.toSong() = Song(
     title = name,
     artist = program?.let { p -> listOfNotNull(p.title.ifBlank { null }, p.performer).joinToString(" · ") }?.ifBlank { null }
         ?: "radiko · ${area.title}",
-    album = "radiko ${area.title}",
+    // The station name stays in the album field while title/artist show the current song.
+    album = name,
     artworkUri = program?.image ?: logo,
     durationMs = 0,
     source = SongSource.LOCAL,

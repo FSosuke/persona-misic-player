@@ -32,7 +32,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
   - **Lyrics** (synced where available, via LRCLIB) on a calling card held by white gloves – with **furigana** above the kanji (tap any word for its reading and English meaning via Jisho), **romaji** for Japanese lyrics (offline, Kuromoji) and a line-by-line **translation** into your phone's language.
   - **Smart playlists** that fill themselves: On repeat, Forgotten favourites, Late-night mix and Fresh finds. Save any of them, your queue or a YouTube Music playlist as a local playlist.
   - **Auto-download favourites**: liked YouTube songs are saved offline in the background (optionally Wi-Fi only).
-  - **Radio tab (ラジオ)**: Japanese live radio from radiko – Sendai, Yamagata, Tokyo or Osaka stations with what's on air right now, also from outside Japan (login method of rajiko).
+  - **Radio tab (ラジオ)**: Japanese live radio from radiko – any of the 47 prefectures or all of Japan by region, with the programme and the song on air right now, also from outside Japan (login method of rajiko).
   - **Per-song stats** – times played, real listening time, average per play.
   - **Your own backgrounds** – pick any image for the player/home; it gets inked and tinted P5-style.
 - **Home** – Recent, Most Played, Song Log and a 3×3 Speed Dial built from your listening history.

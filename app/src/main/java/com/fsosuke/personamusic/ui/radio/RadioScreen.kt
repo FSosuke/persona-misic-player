@@ -1,6 +1,14 @@
 package com.fsosuke.personamusic.ui.radio
 
 import androidx.compose.foundation.background
+import com.fsosuke.personamusic.radio.RadikoRegion
+import com.fsosuke.personamusic.radio.Radiko
+import com.fsosuke.personamusic.data.Song
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -37,7 +45,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.fsosuke.personamusic.playback.toSong
 import com.fsosuke.personamusic.radio.RadikoArea
 import com.fsosuke.personamusic.radio.RadikoStation
 import com.fsosuke.personamusic.ui.components.EmptyState
@@ -56,21 +63,26 @@ private sealed interface RadioState {
     data class Failed(val message: String) : RadioState
 }
 
-/** Japanese live radio from radiko, for the chosen area. */
+private const val ALL_JAPAN = "ALL"
+
+/** Japanese live radio from radiko: one prefecture or all of Japan. */
 @Composable
 fun RadioScreen(contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
     val colors = LocalPersonaColors.current
     val areaId by container.settings.radikoArea.collectAsStateWithLifecycle()
+    val allJapan = areaId == ALL_JAPAN
     val area = RadikoArea.byId(areaId) ?: RadikoArea.Miyagi
     val playerState by container.player.state.collectAsStateWithLifecycle()
     var attempt by remember { mutableIntStateOf(0) }
-    var state by remember(area) { mutableStateOf<RadioState>(RadioState.Loading) }
+    var state by remember(areaId) { mutableStateOf<RadioState>(RadioState.Loading) }
+    var picking by remember { mutableStateOf(false) }
 
-    LaunchedEffect(area, attempt) {
+    LaunchedEffect(areaId, attempt) {
         state = RadioState.Loading
-        state = runCatching { container.radiko.stations(area) }
+        state = runCatching { if (allJapan) container.radiko.allStations() else container.radiko.stations(area) }
             .fold({ RadioState.Loaded(it) }, { RadioState.Failed(it.localizedMessage ?: it.javaClass.simpleName) })
+        if (allJapan) return@LaunchedEffect
         // Keep "on air" fresh while the tab is open.
         while (state is RadioState.Loaded) {
             delay(60_000)
@@ -80,6 +92,13 @@ fun RadioScreen(contentPadding: PaddingValues) {
         }
     }
 
+    // Favourite areas first, then whichever prefecture was picked last.
+    val chips = buildList {
+        add(RadikoArea.Miyagi.id to RadikoArea.Miyagi)
+        add(RadikoArea.Yamagata.id to RadikoArea.Yamagata)
+        if (!allJapan && area != RadikoArea.Miyagi && area != RadikoArea.Yamagata) add(area.id to area)
+    }
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item { PersonaHeader("Radio") }
         item {
@@ -87,21 +106,11 @@ fun RadioScreen(contentPadding: PaddingValues) {
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                RadikoArea.entries.forEach { option ->
-                    val selected = option == area
-                    Box(
-                        Modifier
-                            .rotate(if (selected) -3f else 0f)
-                            .background(if (selected) colors.accent else Color(0xFF222222), slantShape(0.08f))
-                            .clickable { container.settings.setRadikoArea(option.id) }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(option.title, color = if (selected) colors.onAccent else Color.White, style = PersonaType.body)
-                            Text(option.japanese, color = (if (selected) colors.onAccent else Color.White).copy(alpha = 0.7f), style = PersonaType.caption)
-                        }
-                    }
+                chips.forEach { (id, option) ->
+                    AreaChip(option.title, option.japanese, selected = id == areaId) { container.settings.setRadikoArea(id) }
                 }
+                AreaChip("All Japan", "全国", selected = allJapan) { container.settings.setRadikoArea(ALL_JAPAN) }
+                AreaChip("Prefecture…", "都道府県", selected = false) { picking = true }
             }
         }
         when (val s = state) {
@@ -116,14 +125,32 @@ fun RadioScreen(contentPadding: PaddingValues) {
                 }
             }
             is RadioState.Loaded -> {
-                item { ShoutLabel("On air", Modifier.padding(start = 24.dp, top = 6.dp, bottom = 6.dp)) }
-                itemsIndexed(s.stations, key = { _, st -> st.id }) { index, station ->
-                    val playing = playerState.current?.id == station.toSong().id
-                    StationCard(station, index, playing) { container.player.playRadio(station) }
+                val groups: List<Pair<String, List<RadikoStation>>> = if (allJapan) {
+                    val (nationwide, regional) = s.stations.partition { it.nationwide }
+                    listOf("Nationwide" to nationwide) +
+                        RadikoRegion.entries.map { region -> region.title to regional.filter { it.area.region == region } }
+                } else {
+                    listOf("On air" to s.stations)
+                }
+                groups.filter { it.second.isNotEmpty() }.forEach { (title, stations) ->
+                    item(key = "header-$title") {
+                        ShoutLabel(title, Modifier.padding(start = 24.dp, top = 10.dp, bottom = 6.dp))
+                    }
+                    itemsIndexed(stations, key = { _, st -> "$title-${st.id}" }) { index, station ->
+                        val playing = playerState.current?.id == Radiko.ID_PREFIX + station.id
+                        StationCard(
+                            station,
+                            index,
+                            playing,
+                            nowPlaying = playerState.current?.takeIf { playing && it.title != station.name },
+                            showArea = allJapan && !station.nationwide,
+                        ) { container.player.playRadio(station) }
+                    }
                 }
                 item {
                     Text(
-                        "Live from radiko.jp · location: ${area.title} (${area.japanese})",
+                        if (allJapan) "Live from radiko.jp · all ${s.stations.size} stations"
+                        else "Live from radiko.jp · location: ${area.title} (${area.japanese})",
                         color = colors.muted,
                         style = PersonaType.caption,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
@@ -133,10 +160,82 @@ fun RadioScreen(contentPadding: PaddingValues) {
         }
         item { Spacer(Modifier.height(24.dp)) }
     }
+    if (picking) {
+        PrefecturePicker(
+            selected = areaId,
+            onPick = { container.settings.setRadikoArea(it.id); picking = false },
+            onDismiss = { picking = false },
+        )
+    }
 }
 
 @Composable
-private fun StationCard(station: RadikoStation, index: Int, playing: Boolean, onClick: () -> Unit) {
+private fun AreaChip(title: String, japanese: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = LocalPersonaColors.current
+    val textColor = if (selected) colors.onAccent else Color.White
+    Box(
+        Modifier
+            .rotate(if (selected) -3f else 0f)
+            .background(if (selected) colors.accent else Color(0xFF222222), slantShape(0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, color = textColor, style = PersonaType.body)
+            Text(japanese, color = textColor.copy(alpha = 0.7f), style = PersonaType.caption)
+        }
+    }
+}
+
+@Composable
+private fun PrefecturePicker(selected: String, onPick: (RadikoArea) -> Unit, onDismiss: () -> Unit) {
+    val colors = LocalPersonaColors.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        shape = RectangleShape,
+        modifier = Modifier.border(3.dp, Color.White),
+        title = { Text("Prefecture · 都道府県", color = Color.White, style = PersonaType.title) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 460.dp)) {
+                RadikoRegion.entries.forEach { region ->
+                    item(key = region.name) {
+                        Text(
+                            "${region.title} · ${region.japanese}",
+                            color = colors.accent,
+                            style = PersonaType.label,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(RadikoArea.all.filter { it.region == region }, key = { it.id }) { option ->
+                        val isSelected = option.id == selected
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (isSelected) colors.accent else Color.Transparent)
+                                .clickable { onPick(option) }
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                        ) {
+                            Text(option.title, color = if (isSelected) colors.onAccent else Color.White, style = PersonaType.body, modifier = Modifier.weight(1f))
+                            Text(option.japanese, color = if (isSelected) colors.onAccent else colors.muted, style = PersonaType.body)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+@Composable
+private fun StationCard(
+    station: RadikoStation,
+    index: Int,
+    playing: Boolean,
+    nowPlaying: Song?,
+    showArea: Boolean,
+    onClick: () -> Unit,
+) {
     val colors = LocalPersonaColors.current
     val program = station.program
     Row(
@@ -163,7 +262,30 @@ private fun StationCard(station: RadikoStation, index: Int, playing: Boolean, on
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (program != null && program.title.isNotBlank()) {
+            if (nowPlaying != null) {
+                Text(
+                    "♪ ${nowPlaying.title}",
+                    color = colors.onAccent,
+                    style = PersonaType.body,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    nowPlaying.artist.removeSuffix(" · ${station.name}"),
+                    color = colors.onAccent.copy(alpha = 0.8f),
+                    style = PersonaType.caption,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (showArea) {
+                Text(
+                    "${station.area.title} · ${station.area.japanese}",
+                    color = if (playing) colors.onAccent.copy(alpha = 0.8f) else colors.accent,
+                    style = PersonaType.caption,
+                )
+            }
+            if (program != null && program.title.isNotBlank() && nowPlaying == null) {
                 Text(
                     program.title,
                     color = if (playing) colors.onAccent else Color.White.copy(alpha = 0.85f),
