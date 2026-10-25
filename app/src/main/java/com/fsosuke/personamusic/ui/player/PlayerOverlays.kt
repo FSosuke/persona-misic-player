@@ -1,5 +1,14 @@
 package com.fsosuke.personamusic.ui.player
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
+import com.fsosuke.personamusic.data.Dictionary
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -129,6 +138,13 @@ private fun LyricsWithExtras(song: Song, lyrics: Lyrics, positionMs: Long, onSee
     val isJapanese = remember(lines) { lines.any { Romaji.containsJapanese(it) } }
     var showRomaji by rememberSaveable { mutableStateOf(false) }
     var showTranslation by rememberSaveable { mutableStateOf(false) }
+    var showFurigana by rememberSaveable { mutableStateOf(false) }
+    var selectedWord by remember { mutableStateOf<Romaji.Word?>(null) }
+
+    val furigana by produceState<List<List<Romaji.Word>>?>(null, song.id, showFurigana && isJapanese) {
+        value = null
+        if (showFurigana && isJapanese) value = runCatching { Romaji.furigana(lines) }.getOrNull()
+    }
 
     val romaji by produceState<List<String>?>(null, song.id, showRomaji && isJapanese) {
         value = null
@@ -146,19 +162,99 @@ private fun LyricsWithExtras(song: Song, lyrics: Lyrics, positionMs: Long, onSee
             onSeek,
             romaji = if (showRomaji) romaji else null,
             translation = if (showTranslation) translation else null,
+            furigana = if (showFurigana) furigana else null,
+            onWord = { selectedWord = it },
         )
         Row(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (isJapanese) {
+                LyricsToggle("Furigana", showFurigana, loading = showFurigana && furigana == null) { showFurigana = !showFurigana }
                 LyricsToggle("Romaji", showRomaji, loading = showRomaji && romaji == null) { showRomaji = !showRomaji }
             }
             LyricsToggle(
-                "Translate (${container.translator.targetLanguage.uppercase()})",
+                "Translate·${container.translator.targetLanguage.uppercase()}",
                 showTranslation,
                 loading = showTranslation && translation == null,
             ) { showTranslation = !showTranslation }
+        }
+        selectedWord?.let { WordDialog(it, onDismiss = { selectedWord = null }) }
+    }
+}
+
+/** Dictionary card for a tapped lyric word: reading, romaji, part of speech and meanings. */
+@Composable
+private fun WordDialog(word: Romaji.Word, onDismiss: () -> Unit) {
+    val container = LocalAppContainer.current
+    val colors = LocalPersonaColors.current
+    val context = LocalContext.current
+    val entries by produceState<List<Dictionary.Entry>?>(null, word.baseForm) {
+        value = runCatching { container.dictionary.lookup(word.baseForm) }.getOrDefault(emptyList())
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.Black,
+        shape = RectangleShape,
+        modifier = Modifier.border(3.dp, Color.White),
+        title = {
+            Column {
+                Text(word.surface, color = Color.White, style = TextStyle(fontFamily = PersonaFonts.archivoBlack, fontSize = 34.sp))
+                word.reading?.let {
+                    Text("$it · ${Romaji.kanaToRomaji(it)}", color = colors.accent, style = PersonaType.body)
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    word.partOfSpeech.uppercase() + if (word.baseForm != word.surface) " · base form ${word.baseForm}" else "",
+                    color = colors.muted,
+                    style = PersonaType.label.copy(fontSize = 12.sp),
+                )
+                when (val e = entries) {
+                    null -> Text("Looking it up…", color = colors.muted, style = PersonaType.caption)
+                    else -> if (e.isEmpty()) {
+                        Text("No dictionary entry found.", color = colors.muted, style = PersonaType.caption)
+                    } else {
+                        e.first().let { entry ->
+                            if (entry.tags.isNotEmpty()) {
+                                Text(entry.tags.joinToString(" · "), color = colors.highlight, style = PersonaType.caption.copy(fontSize = 11.sp))
+                            }
+                            entry.meanings.forEachIndexed { i, meaning ->
+                                Text("${i + 1}. $meaning", color = Color.White, style = PersonaType.body)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://jisho.org/search/" + Uri.encode(word.baseForm)))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }) { Text("Jisho") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
+}
+
+/** A lyric line as words with furigana above the kanji; tapping a word opens its dictionary card. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FuriganaLine(words: List<Romaji.Word>, color: Color, rubyColor: Color, fontSize: Float, onWord: (Romaji.Word) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.Center) {
+        words.forEach { word ->
+            Row(Modifier.clickable(enabled = word.isLookupable) { onWord(word) }) {
+                word.parts.forEach { (text, ruby) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(ruby ?: " ", color = rubyColor, style = PersonaType.caption.copy(fontSize = (fontSize * 0.55f).sp))
+                        Text(text, color = color, style = PersonaType.body.copy(fontSize = fontSize.sp))
+                    }
+                }
+            }
         }
     }
 }
@@ -172,12 +268,12 @@ private fun LyricsToggle(label: String, active: Boolean, loading: Boolean, onCli
             .background(if (active) colors.accent else Color.Black, slantShape(0.1f))
             .border(2.dp, if (active) Color.White else Color(0xFF555555), slantShape(0.1f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 5.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
         Text(
             (if (loading) "… " else "") + label.uppercase(),
             color = if (active) colors.onAccent else Color.White,
-            style = PersonaType.label.copy(fontSize = 13.sp),
+            style = PersonaType.label.copy(fontSize = 12.sp),
         )
     }
 }
@@ -189,6 +285,8 @@ private fun LyricsList(
     onSeek: (Long) -> Unit,
     romaji: List<String>?,
     translation: List<String>?,
+    furigana: List<List<Romaji.Word>>?,
+    onWord: (Romaji.Word) -> Unit,
 ) {
     val colors = LocalPersonaColors.current
     val listState = rememberLazyListState()
@@ -217,7 +315,12 @@ private fun LyricsList(
                         .padding(horizontal = 26.dp, vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(text, color = colors.onAccent, style = PersonaType.title.copy(fontSize = 19.sp), textAlign = TextAlign.Center)
+                    val words = furigana?.getOrNull(index)
+                    if (words != null && line.text.isNotBlank()) {
+                        FuriganaLine(words, colors.onAccent, colors.onAccent.copy(alpha = 0.85f), 19f, onWord)
+                    } else {
+                        Text(text, color = colors.onAccent, style = PersonaType.title.copy(fontSize = 19.sp), textAlign = TextAlign.Center)
+                    }
                     romajiLine?.let {
                         Text(it, color = colors.onAccent.copy(alpha = 0.85f), style = PersonaType.caption.copy(fontStyle = FontStyle.Italic), textAlign = TextAlign.Center)
                     }
@@ -228,12 +331,17 @@ private fun LyricsList(
             } else {
                 val dim = current >= 0 && index < current
                 Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text,
-                        color = if (dim) Color(0xFF6E6E6E) else Color(0xFFB5B5B5),
-                        style = PersonaType.body.copy(fontSize = 16.sp),
-                        textAlign = TextAlign.Center,
-                    )
+                    val words = furigana?.getOrNull(index)
+                    if (words != null && line.text.isNotBlank()) {
+                        FuriganaLine(words, if (dim) Color(0xFF6E6E6E) else Color(0xFFD0D0D0), colors.highlight.copy(alpha = 0.85f), 16f, onWord)
+                    } else {
+                        Text(
+                            text,
+                            color = if (dim) Color(0xFF6E6E6E) else Color(0xFFB5B5B5),
+                            style = PersonaType.body.copy(fontSize = 16.sp),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                     romajiLine?.let {
                         Text(it, color = Color(0xFF8C8C8C), style = PersonaType.caption.copy(fontStyle = FontStyle.Italic), textAlign = TextAlign.Center)
                     }

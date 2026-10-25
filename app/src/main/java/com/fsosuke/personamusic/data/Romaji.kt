@@ -17,6 +17,70 @@ object Romaji {
 
     fun containsJapanese(text: String) = japanese.containsMatchIn(text)
 
+    /** One word of a lyric line, with furigana for its kanji and dictionary info. */
+    data class Word(
+        val surface: String,
+        /** Pieces of the surface; `ruby` is the hiragana reading for kanji pieces. */
+        val parts: List<Pair<String, String?>>,
+        val reading: String?,
+        val baseForm: String,
+        val partOfSpeech: String,
+    ) {
+        val isLookupable: Boolean get() = containsJapanese(surface) && partOfSpeech != "Particle" && partOfSpeech != "Symbol"
+    }
+
+    /** Splits each line into words with furigana (non-Japanese lines become a single plain word). */
+    suspend fun furigana(lines: List<String>): List<List<Word>> = withContext(Dispatchers.Default) {
+        lines.map { line ->
+            if (!containsJapanese(line)) listOf(Word(line, listOf(line to null), null, line, "Other"))
+            else tokenizer.tokenize(line).map { token ->
+                val surface = token.surface
+                val reading = token.reading.takeIf { it.isNotEmpty() && it != "*" }?.let { toHiragana(it) }
+                val parts = if (reading != null && KANJI.containsMatchIn(surface)) rubyParts(surface, reading) else listOf(surface to null)
+                Word(
+                    surface = surface,
+                    parts = parts,
+                    reading = reading,
+                    baseForm = token.baseForm.takeIf { it.isNotEmpty() && it != "*" } ?: surface,
+                    partOfSpeech = POS[token.partOfSpeechLevel1] ?: "Other",
+                )
+            }
+        }
+    }
+
+    /** "走る" + "はしる" → [走/はし, る]: kana around the kanji isn't repeated in the ruby. */
+    private fun rubyParts(surface: String, reading: String): List<Pair<String, String?>> {
+        val hiraSurface = toHiragana(surface)
+        var prefix = 0
+        while (prefix < surface.length && prefix < reading.length && !KANJI.matches(surface[prefix].toString()) &&
+            hiraSurface[prefix] == reading[prefix]
+        ) prefix++
+        var suffix = 0
+        while (suffix < surface.length - prefix && suffix < reading.length - prefix &&
+            !KANJI.matches(surface[surface.length - 1 - suffix].toString()) &&
+            hiraSurface[surface.length - 1 - suffix] == reading[reading.length - 1 - suffix]
+        ) suffix++
+        val middle = surface.substring(prefix, surface.length - suffix)
+        val middleReading = reading.substring(prefix, reading.length - suffix)
+        return buildList {
+            if (prefix > 0) add(surface.substring(0, prefix) to null)
+            add(middle to middleReading.ifEmpty { null })
+            if (suffix > 0) add(surface.substring(surface.length - suffix) to null)
+        }
+    }
+
+    fun toHiragana(text: String) = buildString {
+        text.forEach { c -> append(if (c in 'ァ'..'ヶ') c - 0x60 else c) }
+    }
+
+    private val KANJI = Regex("[\\u3400-\\u4DBF\\u4E00-\\u9FFF々]")
+
+    private val POS = mapOf(
+        "名詞" to "Noun", "動詞" to "Verb", "形容詞" to "Adjective", "副詞" to "Adverb", "助詞" to "Particle",
+        "助動詞" to "Auxiliary", "連体詞" to "Pre-noun", "接続詞" to "Conjunction", "感動詞" to "Interjection",
+        "記号" to "Symbol", "接頭詞" to "Prefix", "フィラー" to "Filler",
+    )
+
     suspend fun convert(lines: List<String>): List<String> = withContext(Dispatchers.Default) {
         lines.map { line -> if (containsJapanese(line)) convertLine(line) else line }
     }
