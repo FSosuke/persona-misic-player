@@ -82,6 +82,8 @@ class YtMusicLibrary(
     private val accounts: YtAccountManager,
     private val youTube: YouTubeMusic,
     private val scope: CoroutineScope,
+    /** Region for Home recommendations, null = the phone's country. */
+    private val homeRegion: () -> String? = { null },
 ) {
     private val _feed = MutableStateFlow(YtFeed())
     val feed: StateFlow<YtFeed> = _feed.asStateFlow()
@@ -152,11 +154,12 @@ class YtMusicLibrary(
 
     private suspend fun loadHome(cookie: String): List<HomeShelf> {
         val shelves = mutableListOf<HomeShelf>()
-        var page: JSONObject = api.post("browse", cookie, JSONObject().put("browseId", "FEmusic_home"))
+        val region = homeRegion()
+        var page: JSONObject = api.post("browse", cookie, JSONObject().put("browseId", "FEmusic_home"), region = region)
         for (i in 0 until HOME_PAGES) {
             shelves += parseShelves(page)
             val section = findFirst(page, "sectionListRenderer") ?: findFirst(page, "sectionListContinuation") ?: page
-            page = nextPage(section, cookie) ?: break
+            page = nextPage(section, cookie, region) ?: break
         }
         return shelves
     }
@@ -461,12 +464,12 @@ class YtMusicLibrary(
 
     // --- Continuations ---------------------------------------------------------------------
 
-    private suspend fun nextPage(container: Any, cookie: String?): JSONObject? {
+    private suspend fun nextPage(container: Any, cookie: String?, region: String? = null): JSONObject? {
         findFirst(container, "continuationCommand")?.str("token")?.let { token ->
-            return api.post("browse", cookie, JSONObject().put("continuation", token))
+            return api.post("browse", cookie, JSONObject().put("continuation", token), region = region)
         }
         findFirst(container, "nextContinuationData")?.str("continuation")?.let { token ->
-            return api.post("browse", cookie, JSONObject(), mapOf("ctoken" to token, "continuation" to token, "type" to "next"))
+            return api.post("browse", cookie, JSONObject(), mapOf("ctoken" to token, "continuation" to token, "type" to "next"), region)
         }
         return null
     }

@@ -68,7 +68,7 @@ class AppContainer(context: Context) {
     val dictionary = Dictionary(httpClient)
     val innerTube = InnerTube(httpClient, context)
     val ytAccounts = YtAccountManager(context, innerTube)
-    val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope)
+    val ytLibrary = YtMusicLibrary(innerTube, ytAccounts, youTube, appScope) { settings.homeRegion.value.ifEmpty { null } }
     val player = PlayerConnection(context)
     val sleepTimer = SleepTimer()
     val audioEffects = AudioEffects(settings, appScope)

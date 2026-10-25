@@ -3,6 +3,8 @@ package com.fsosuke.personamusic.ui.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -521,6 +523,32 @@ private fun RecommendationsSection(onOpenHidden: () -> Unit) {
             checked = japaneseOnly,
             onChange = container.settings::setJapaneseOnly,
         )
+        val region by container.settings.homeRegion.collectAsStateWithLifecycle()
+        Text("Recommendations from", color = Color.White, style = PersonaType.title)
+        Text(
+            "The country YouTube Music builds your Home feed and its charts for.",
+            color = colors.muted,
+            style = PersonaType.caption,
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf("JP" to "Japan", "US" to "USA", "KR" to "Korea", "" to "My country").forEach { (code, label) ->
+                val selected = code == region
+                Box(
+                    Modifier
+                        .rotate(if (selected) -3f else 0f)
+                        .background(if (selected) colors.accent else Color(0xFF222222), slantShape(0.08f))
+                        .clickable {
+                            if (!selected) {
+                                container.settings.setHomeRegion(code)
+                                container.ytLibrary.refresh(force = true)
+                            }
+                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(label, color = if (selected) colors.onAccent else Color.White, style = PersonaType.body)
+                }
+            }
+        }
         Row(
             Modifier.fillMaxWidth().clickable(onClick = onOpenHidden).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,

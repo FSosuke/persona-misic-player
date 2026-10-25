@@ -135,6 +135,15 @@ class AppSettings(context: Context) {
         _releaseRadar.value = value
     }
 
+    /** Country YouTube Music builds Home recommendations and charts for ("" = the phone's country). */
+    private val _homeRegion = MutableStateFlow(prefs.getString(KEY_HOME_REGION, "JP") ?: "JP")
+    val homeRegion: StateFlow<String> = _homeRegion.asStateFlow()
+
+    fun setHomeRegion(value: String) {
+        prefs.edit().putString(KEY_HOME_REGION, value).apply()
+        _homeRegion.value = value
+    }
+
     private val _japaneseOnly = MutableStateFlow(prefs.getBoolean(KEY_JAPANESE_ONLY, false))
     /** Only recommend / auto-play Japanese music (plus artists the user already listens to). */
     val japaneseOnly: StateFlow<Boolean> = _japaneseOnly.asStateFlow()
@@ -192,6 +201,7 @@ class AppSettings(context: Context) {
         const val KEY_PLAYER_BG = "player_background"
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_JAPANESE_ONLY = "japanese_only"
+        const val KEY_HOME_REGION = "home_region"
         const val KEY_RELEASE_RADAR = "release_radar"
         const val KEY_BACKUP_FOLDER = "backup_folder"
         const val KEY_EQ_ENABLED = "eq_enabled"
