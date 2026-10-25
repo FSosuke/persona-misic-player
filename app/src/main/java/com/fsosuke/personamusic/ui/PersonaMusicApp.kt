@@ -54,6 +54,8 @@ import com.fsosuke.personamusic.ui.playlist.PlaylistsScreen
 import com.fsosuke.personamusic.ui.settings.CustomizeScreen
 import com.fsosuke.personamusic.ui.settings.HiddenScreen
 import com.fsosuke.personamusic.ui.settings.SoundScreen
+import com.fsosuke.personamusic.ui.social.SocialStatsScreen
+import com.fsosuke.personamusic.ui.social.StatUpOverlay
 import com.fsosuke.personamusic.ui.stats.StatsScreen
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.youtube.YtLoginScreen
@@ -67,6 +69,7 @@ private object Routes {
     const val HIDDEN = "hidden"
     const val CALENDAR = "calendar"
     const val SOUND = "sound"
+    const val SOCIAL = "social"
     const val WRAPPED = "wrapped/{period}"
     fun wrapped(period: WrappedPeriod) = "wrapped/" + when (period) {
         is WrappedPeriod.Month -> period.month.toString()
@@ -127,6 +130,7 @@ fun PersonaMusicApp() {
                     onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
                     onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
                     onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
+                    onOpenSocial = { nav.navigate(Routes.SOCIAL) },
                     contentPadding = padding,
                 )
             }
@@ -195,6 +199,7 @@ fun PersonaMusicApp() {
                     onBack = { nav.popBackStack() },
                     onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
                     onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
+                    onOpenSocial = { nav.navigate(Routes.SOCIAL) },
                     contentPadding = padding,
                 )
             }
@@ -210,6 +215,7 @@ fun PersonaMusicApp() {
                 val period = if (raw.length == 4) WrappedPeriod.Year(raw.toInt()) else WrappedPeriod.Month(YearMonth.parse(raw))
                 WrappedScreen(period, onClose = { nav.popBackStack() })
             }
+            composable(Routes.SOCIAL) { SocialStatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.SOUND) { SoundScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.HIDDEN) { HiddenScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CONFIDANTS) { ConfidantsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
@@ -241,6 +247,7 @@ fun PersonaMusicApp() {
         }
 
         RankUpOverlay()
+        StatUpOverlay()
     }
     }
 }

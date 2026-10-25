@@ -94,6 +94,7 @@ fun HomeScreen(
     onOpenConfidants: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenWrapped: (WrappedPeriod) -> Unit,
+    onOpenSocial: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     val container = LocalAppContainer.current
@@ -197,12 +198,13 @@ fun HomeScreen(
         } else if (!typing && !showHistory && submitted.isBlank()) {
             item { WrappedBanner(onOpenWrapped) }
             item {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true)
-                    PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) })
+                    item { PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true) }
+                    item { PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) }) }
+                    item { PersonaButton("★ Social stats", onClick = onOpenSocial, inverted = true) }
                 }
             }
             if (newReleases.isNotEmpty()) {

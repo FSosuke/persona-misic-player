@@ -23,6 +23,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
 - **Wrapped** – monthly and yearly recap as a story slideshow: minutes listened, top confidant with arcana, top songs and artists, habits (favourite time, busiest day, streak, new artists) and a calling card to share.
 - **Japan tab on Home** – YouTube Music charts for Japan (ranked top songs, trending, top artists) and Japanese new releases (albums, singles, music videos).
 - **Your taste, your rules** – "Not interested" / "Hide artist" in every song menu (also sent to YouTube Music when possible) and a *Japanese music only* switch that filters recommendations, radio and autoplay; hidden items can be restored in Customize.
+- **Social Stats** – Persona 5's Knowledge, Guts, Proficiency, Kindness and Charm, earned by how you listen (new artists, late-night plays, streaks, hearts, playlists), with a pentagon chart and "STAT UP!" moments.
 - **Confidants** – every artist you listen to becomes a confidant with a Major Arcana; ranks 1–MAX grow with your plays, with a spinning "RANK UP!" card when they level up and a confidant overview.
 - **Sleep timer "Take your time"** – stop after 15–90 min (with fade-out) or at the end of the song.
 - **Persona UI** – ransom-note titles in mixed display fonts, star-pattern backgrounds, slanted cards, the red halftone playlist board, the star pause menu (Playlist / Stats / Customize / Share).

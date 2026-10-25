@@ -63,6 +63,18 @@ interface MusicDao {
     @Query("SELECT s.artist AS name, MIN(e.playedAt) AS firstPlayed FROM play_events e JOIN songs s ON s.id = e.songId GROUP BY s.artist")
     suspend fun artistFirstPlays(): List<ArtistFirstPlay>
 
+    @Query("SELECT playedAt FROM play_events")
+    suspend fun allPlayTimes(): List<Long>
+
+    @Query("SELECT COUNT(*) FROM liked_songs")
+    suspend fun likedCount(): Int
+
+    @Query("SELECT COUNT(*) FROM playlist_entries")
+    suspend fun playlistEntryCount(): Int
+
+    @Query("SELECT COUNT(*) FROM playlists")
+    suspend fun playlistCount(): Int
+
     @Query("SELECT MIN(playedAt) FROM play_events")
     suspend fun firstPlayAt(): Long?
 

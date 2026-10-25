@@ -44,7 +44,7 @@ import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
 import com.fsosuke.personamusic.ui.theme.PersonaType
 
 @Composable
-fun StatsScreen(onBack: () -> Unit, onOpenConfidants: () -> Unit, onOpenCalendar: () -> Unit, contentPadding: PaddingValues) {
+fun StatsScreen(onBack: () -> Unit, onOpenConfidants: () -> Unit, onOpenCalendar: () -> Unit, onOpenSocial: () -> Unit, contentPadding: PaddingValues) {
     val repo = LocalAppContainer.current.repository
     val colors = LocalPersonaColors.current
     val totalPlays by repo.totalPlays.collectAsStateWithLifecycle(initialValue = 0)
@@ -80,6 +80,7 @@ fun StatsScreen(onBack: () -> Unit, onOpenConfidants: () -> Unit, onOpenCalendar
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 PersonaButton("Confidants", onClick = onOpenConfidants)
                 PersonaButton("Calendar", onClick = onOpenCalendar, inverted = true)
+                PersonaButton("Social", onClick = onOpenSocial, inverted = true)
             }
         }
         if (artists.isNotEmpty()) {

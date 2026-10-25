@@ -310,6 +310,7 @@ class PlaybackService : MediaLibraryService() {
             currentEvent = scope.async(Dispatchers.IO) {
                 container.repository.logPlay(mediaItem.mediaId).also {
                     container.repository.rankUpAfterPlay(mediaItem.toSong())?.let { container.pendingRankUp.value = it }
+                    container.checkStatUps()
                 }
             }
             maybeExtendQueue()

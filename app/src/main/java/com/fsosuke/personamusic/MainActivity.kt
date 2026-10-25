@@ -50,6 +50,8 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         container.player.connect()
         container.updates.checkIfDue()
+        // Likes and playlist edits also raise stats.
+        container.checkStatUps()
     }
 
     override fun onStop() {

@@ -21,6 +21,8 @@ import com.fsosuke.personamusic.playback.PlayerConnection
 import com.fsosuke.personamusic.release.ReleaseRadar
 import com.fsosuke.personamusic.playback.SleepTimer
 import com.fsosuke.personamusic.data.RankUp
+import com.fsosuke.personamusic.data.SocialStats
+import com.fsosuke.personamusic.data.StatUp
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.fsosuke.personamusic.update.UpdateManager
 import com.fsosuke.personamusic.youtube.InnerTube
@@ -31,6 +33,7 @@ import com.fsosuke.personamusic.youtube.YouTubeMusic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -69,11 +72,23 @@ class AppContainer(context: Context) {
 
     /** Latest confidant rank-up, shown as an overlay until dismissed (survives the app being closed). */
     val pendingRankUp = MutableStateFlow<RankUp?>(null)
+
+    /** Social stats that just levelled up, shown one after another. */
+    val pendingStatUps = MutableStateFlow<List<StatUp>>(emptyList())
     val backup = BackupManager(context, database, settings)
     val autoBackup = AutoBackup(context, backup, settings)
     val searchHistory = SearchHistory(context)
     val contentFilter = ContentFilter(database.musicDao(), settings, appScope)
     val history = ListeningHistory(database.musicDao())
+    val socialStats = SocialStats(context, database.musicDao())
+
+    /** Re-checks social stats in the background and queues any "stat up" for display. */
+    fun checkStatUps() {
+        appScope.launch {
+            val ups = runCatching { socialStats.checkForStatUps() }.getOrDefault(emptyList())
+            if (ups.isNotEmpty()) pendingStatUps.value = pendingStatUps.value + ups
+        }
+    }
     val releaseRadar = ReleaseRadar(context, ytLibrary, database.musicDao(), settings)
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
