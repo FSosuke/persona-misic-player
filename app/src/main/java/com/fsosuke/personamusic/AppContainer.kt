@@ -16,6 +16,7 @@ import com.fsosuke.personamusic.data.Translator
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.data.SearchHistory
 import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.download.AutoDownload
 import com.fsosuke.personamusic.download.DownloadManager
 import com.fsosuke.personamusic.playback.AudioEffects
 import com.fsosuke.personamusic.playback.PlayerConnection
@@ -92,12 +93,14 @@ class AppContainer(context: Context) {
         }
     }
     val releaseRadar = ReleaseRadar(context, ytLibrary, database.musicDao(), settings)
+    val autoDownload = AutoDownload(context, settings)
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
 
     /** Heart a song locally and, for YouTube songs, on the signed-in YouTube Music account too. */
     suspend fun setLiked(song: Song, liked: Boolean) {
         repository.setLiked(song, liked)
+        if (liked && song.source == com.fsosuke.personamusic.data.SongSource.YOUTUBE) autoDownload.runSoon()
         if (settings.syncLikes.value && ytAccounts.cookie != null) {
             runCatching { ytLibrary.rate(song, liked) }
         }

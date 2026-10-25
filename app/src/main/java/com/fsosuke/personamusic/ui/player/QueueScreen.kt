@@ -58,7 +58,9 @@ import com.fsosuke.personamusic.ui.components.Chunky
 import com.fsosuke.personamusic.ui.components.ChunkyIcon
 import com.fsosuke.personamusic.ui.components.Graffiti
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PolygonShape
+import com.fsosuke.personamusic.ui.components.SavePlaylistDialog
 import com.fsosuke.personamusic.ui.components.ShoutLabel
 import com.fsosuke.personamusic.ui.components.drawConnectorBolt
 import com.fsosuke.personamusic.ui.components.redSwirls
@@ -81,13 +83,14 @@ fun QueueScreen(onClose: () -> Unit) {
     val rowPx = with(LocalDensity.current) { RowHeight.toPx() }
     var dragging by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
+    var saving by remember { mutableStateOf(false) }
 
     val current = state.currentIndex
     val queue = state.queue
 
     Box(Modifier.fillMaxSize().redSwirls(colors).zigZagSpine()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 48.dp)) {
-            item { QueueHeader(subtitle = "Your queue · ${queue.size} songs", onClose = onClose) }
+            item { QueueHeader(subtitle = "Your queue · ${queue.size} songs", onClose = onClose, onSave = { saving = true }) }
 
             if (current > 0 && current - 1 < queue.size) {
                 item {
@@ -152,10 +155,11 @@ fun QueueScreen(onClose: () -> Unit) {
             }
         }
     }
+    if (saving) SavePlaylistDialog(queue, "Queue", onDismiss = { saving = false })
 }
 
 @Composable
-private fun QueueHeader(subtitle: String, onClose: () -> Unit) {
+private fun QueueHeader(subtitle: String, onClose: () -> Unit, onSave: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(230.dp)) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width
@@ -182,6 +186,12 @@ private fun QueueHeader(subtitle: String, onClose: () -> Unit) {
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 60.dp, end = 12.dp)) {
             Icon(Icons.Filled.KeyboardArrowDown, "Close", tint = Color.White, modifier = Modifier.size(40.dp))
         }
+        PersonaButton(
+            "Save",
+            onClick = onSave,
+            inverted = true,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 40.dp),
+        )
         Row(Modifier.align(Alignment.TopStart).padding(start = 22.dp, top = 92.dp).rotate(3f)) {
             val big = TextStyle(fontFamily = PersonaFonts.anton, fontSize = 74.sp)
             Text("N", color = Color.Black, style = big)

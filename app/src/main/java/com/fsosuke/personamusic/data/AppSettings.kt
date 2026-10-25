@@ -61,6 +61,22 @@ class AppSettings(context: Context) {
         _reportHistory.value = value
     }
 
+    private val _autoDownloadLiked = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_LIKED, false))
+    /** Download hearted YouTube songs automatically. */
+    val autoDownloadLiked: StateFlow<Boolean> = _autoDownloadLiked.asStateFlow()
+    private val _autoDownloadWifiOnly = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DOWNLOAD_WIFI, true))
+    val autoDownloadWifiOnly: StateFlow<Boolean> = _autoDownloadWifiOnly.asStateFlow()
+
+    fun setAutoDownloadLiked(value: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_DOWNLOAD_LIKED, value).apply()
+        _autoDownloadLiked.value = value
+    }
+
+    fun setAutoDownloadWifiOnly(value: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_DOWNLOAD_WIFI, value).apply()
+        _autoDownloadWifiOnly.value = value
+    }
+
     private val _translateTo = MutableStateFlow(prefs.getString(KEY_TRANSLATE_TO, "en") ?: "en")
     /** Target language of lyric translations ("en" or "de"). */
     val translateTo: StateFlow<String> = _translateTo.asStateFlow()
@@ -180,6 +196,8 @@ class AppSettings(context: Context) {
         const val KEY_BACKUP_FOLDER = "backup_folder"
         const val KEY_EQ_ENABLED = "eq_enabled"
         const val KEY_TRANSLATE_TO = "translate_to"
+        const val KEY_AUTO_DOWNLOAD_LIKED = "auto_download_liked"
+        const val KEY_AUTO_DOWNLOAD_WIFI = "auto_download_wifi"
         const val KEY_EQ_LEVELS = "eq_levels"
         const val KEY_NORMALIZE = "normalize"
         const val KEY_CROSSFADE = "crossfade"

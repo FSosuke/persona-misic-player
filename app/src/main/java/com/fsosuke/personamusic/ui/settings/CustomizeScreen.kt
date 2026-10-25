@@ -479,6 +479,32 @@ private fun DownloadFolderSection() {
         Spacer(Modifier.width(12.dp))
         PersonaButton(if (folder == null) "Choose" else "Change", onClick = { picker.launch(null) }, inverted = true)
     }
+    val autoLiked by container.settings.autoDownloadLiked.collectAsStateWithLifecycle()
+    val wifiOnly by container.settings.autoDownloadWifiOnly.collectAsStateWithLifecycle()
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SettingSwitch(
+            title = "Auto-download favourites",
+            description = if (folder == null) "Choose a download folder first."
+            else "Liked YouTube songs are saved for offline listening in the background.",
+            checked = autoLiked && folder != null,
+            enabled = folder != null,
+            onChange = {
+                container.settings.setAutoDownloadLiked(it)
+                container.autoDownload.schedule()
+                if (it) container.autoDownload.runSoon()
+            },
+        )
+        SettingSwitch(
+            title = "Wi-Fi only",
+            description = "Only auto-download on unmetered networks.",
+            checked = wifiOnly,
+            enabled = autoLiked && folder != null,
+            onChange = {
+                container.settings.setAutoDownloadWifiOnly(it)
+                container.autoDownload.schedule()
+            },
+        )
+    }
 }
 
 @Composable

@@ -32,7 +32,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.fsosuke.personamusic.data.SmartPlaylist
 import com.fsosuke.personamusic.data.WrappedPeriod
+import com.fsosuke.personamusic.ui.playlist.SmartPlaylistScreen
 import com.fsosuke.personamusic.ui.artist.ArtistScreen
 import com.fsosuke.personamusic.ui.calendar.CalendarScreen
 import com.fsosuke.personamusic.ui.wrapped.WrappedScreen
@@ -70,6 +72,7 @@ private object Routes {
     const val CALENDAR = "calendar"
     const val SOUND = "sound"
     const val SOCIAL = "social"
+    const val SMART = "smart/{id}"
     const val WRAPPED = "wrapped/{period}"
     fun wrapped(period: WrappedPeriod) = "wrapped/" + when (period) {
         is WrappedPeriod.Month -> period.month.toString()
@@ -98,7 +101,7 @@ fun PersonaMusicApp() {
 
     val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE && route != Routes.WRAPPED
     val selectedTab = Tab.entries.firstOrNull { it.route == route }
-        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS) Tab.Playlists else null
+        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS || route == Routes.SMART) Tab.Playlists else null
 
     var chromeHeightPx by remember { mutableIntStateOf(0) }
     val chromeHeight = with(LocalDensity.current) { chromeHeightPx.toDp() }
@@ -140,6 +143,7 @@ fun PersonaMusicApp() {
                     onOpen = { nav.navigate(Routes.playlist(it)) },
                     onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
                     onOpenDownloads = { nav.navigate(Routes.DOWNLOADS) },
+                    onOpenSmart = { nav.navigate("smart/$it") },
                     contentPadding = padding,
                 )
             }
@@ -214,6 +218,10 @@ fun PersonaMusicApp() {
                 val raw = entry.arguments?.getString("period").orEmpty()
                 val period = if (raw.length == 4) WrappedPeriod.Year(raw.toInt()) else WrappedPeriod.Month(YearMonth.parse(raw))
                 WrappedScreen(period, onClose = { nav.popBackStack() })
+            }
+            composable(Routes.SMART, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val smart = SmartPlaylist.byId(entry.arguments?.getString("id").orEmpty()) ?: SmartPlaylist.OnRepeat
+                SmartPlaylistScreen(smart, onBack = { nav.popBackStack() }, contentPadding = padding)
             }
             composable(Routes.SOCIAL) { SocialStatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.SOUND) { SoundScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }

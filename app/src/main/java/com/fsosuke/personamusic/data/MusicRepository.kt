@@ -73,6 +73,18 @@ class MusicRepository(
 
     val confidants = dao.artistPlayCounts().map { Confidants.fromCounts(it) }
 
+    fun smartPlaylist(playlist: SmartPlaylist) = playlist.songs(dao)
+
+    suspend fun likedYoutubeSongs() = dao.likedYoutubeSongs()
+
+    /** Creates a local playlist containing [songs] (in order). */
+    suspend fun createPlaylistFrom(name: String, songs: List<Song>): Long {
+        dao.upsertSongs(songs)
+        val id = dao.insertPlaylist(Playlist(name = name))
+        songs.distinctBy { it.id }.forEachIndexed { i, song -> dao.insertEntry(PlaylistEntry(id, song.id, i)) }
+        return id
+    }
+
     /** Rank-up check right after a play of [song] was logged. */
     suspend fun rankUpAfterPlay(song: Song): RankUp? {
         val artist = primaryArtist(song.artist)

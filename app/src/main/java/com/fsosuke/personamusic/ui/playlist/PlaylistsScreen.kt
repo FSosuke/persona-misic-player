@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fsosuke.personamusic.data.SmartPlaylist
 import com.fsosuke.personamusic.ui.components.Artwork
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaHeader
@@ -61,7 +63,13 @@ private val RowHeight = 170.dp
  * black line, like the confidant map in Persona 5.
  */
 @Composable
-fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, onOpenDownloads: () -> Unit, contentPadding: PaddingValues) {
+fun PlaylistsScreen(
+    onOpen: (Long) -> Unit,
+    onOpenYt: (String) -> Unit,
+    onOpenDownloads: () -> Unit,
+    onOpenSmart: (String) -> Unit,
+    contentPadding: PaddingValues,
+) {
     val container = LocalAppContainer.current
     val colors = LocalPersonaColors.current
     val scope = rememberCoroutineScope()
@@ -75,6 +83,9 @@ fun PlaylistsScreen(onOpen: (Long) -> Unit, onOpenYt: (String) -> Unit, onOpenDo
     val cards = buildList {
         add(BoardCard("fav", "Favourites", "${liked.size}", liked.firstOrNull { it.artworkUri != null }?.artworkUri, isFavourites = true) { onOpen(FAVOURITES_ID) })
         add(BoardCard("downloads", "Downloads", "${downloaded.size}", downloaded.firstOrNull { it.artworkUri != null }?.artworkUri, isDownloads = true) { onOpenDownloads() })
+        SmartPlaylist.entries.forEach { smart ->
+            add(BoardCard("smart-${smart.id}", smart.title, "AUTO", null, isSmart = true) { onOpenSmart(smart.id) })
+        }
         playlists.forEach { p -> add(BoardCard("local-${p.id}", p.name, "${p.songCount}", p.coverUri) { onOpen(p.id) }) }
         ytFeed.playlists.forEach { p -> add(BoardCard("yt-${p.id}", p.title, null, p.thumbnail, isYouTube = true) { onOpenYt(p.id) }) }
     }
@@ -154,6 +165,7 @@ private class BoardCard(
     val isFavourites: Boolean = false,
     val isYouTube: Boolean = false,
     val isDownloads: Boolean = false,
+    val isSmart: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -165,7 +177,14 @@ private fun PlaylistCard(card: BoardCard, index: Int, modifier: Modifier = Modif
         // Drop shadow in dark accent, offset like a cut-out pasted on the board.
         Box(Modifier.matchParentSize().offset(8.dp, 8.dp).background(Color(0xFF5A0008), shape))
         Box(Modifier.matchParentSize().background(Color.Black, shape).padding(10.dp)) {
-            if (card.isDownloads && card.cover == null) {
+            if (card.isSmart) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.align(Alignment.Center).size(64.dp),
+                )
+            } else if (card.isDownloads && card.cover == null) {
                 Icon(
                     Icons.Filled.DownloadDone,
                     contentDescription = null,

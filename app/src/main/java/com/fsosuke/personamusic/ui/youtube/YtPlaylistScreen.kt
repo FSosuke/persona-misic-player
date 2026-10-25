@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +41,7 @@ import com.fsosuke.personamusic.ui.components.EmptyState
 import com.fsosuke.personamusic.ui.components.LocalAppContainer
 import com.fsosuke.personamusic.ui.components.PersonaButton
 import com.fsosuke.personamusic.ui.components.PersonaHeader
+import com.fsosuke.personamusic.ui.components.SavePlaylistDialog
 import com.fsosuke.personamusic.ui.components.SongRow
 import com.fsosuke.personamusic.ui.components.rememberDownloadAction
 import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
@@ -65,6 +68,7 @@ fun YtPlaylistScreen(playlistId: String, onBack: () -> Unit, contentPadding: Pad
     }
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val download = rememberDownloadAction()
+    var copying by remember { mutableStateOf(false) }
 
     fun play(songs: List<Song>, index: Int, shuffle: Boolean = false) {
         container.appScope.launch { container.repository.remember(songs) }
@@ -112,10 +116,14 @@ fun YtPlaylistScreen(playlistId: String, onBack: () -> Unit, contentPadding: Pad
                     item { EmptyState("Empty", "This playlist has no playable songs.") }
                 } else {
                     item {
-                        Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            PersonaButton("Play", onClick = { play(page.songs, 0) })
-                            PersonaButton("Shuffle", onClick = { play(page.songs, 0, shuffle = true) }, inverted = true)
-                            PersonaButton("Save", onClick = { download(page.songs) }, inverted = true)
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            item { PersonaButton("Play", onClick = { play(page.songs, 0) }) }
+                            item { PersonaButton("Shuffle", onClick = { play(page.songs, 0, shuffle = true) }, inverted = true) }
+                            item { PersonaButton("Download", onClick = { download(page.songs) }, inverted = true) }
+                            item { PersonaButton("Copy to library", onClick = { copying = true }, inverted = true) }
                         }
                     }
                     itemsIndexed(page.songs, key = { i, song -> "$i-${song.id}" }) { index, song ->
@@ -126,4 +134,6 @@ fun YtPlaylistScreen(playlistId: String, onBack: () -> Unit, contentPadding: Pad
         }
         item { Spacer(Modifier.height(24.dp)) }
     }
+    val loaded = (state as? PageState.Loaded)?.page
+    if (copying && loaded != null) SavePlaylistDialog(loaded.songs, loaded.title, onDismiss = { copying = false })
 }

@@ -43,6 +43,37 @@ interface MusicDao {
     )
     fun artistPlays(artist: String): Flow<Int>
 
+    // --- Smart playlists -------------------------------------------------------------------
+
+    @Query(
+        "SELECT s.*, COUNT(*) AS plays FROM play_events e JOIN songs s ON s.id = e.songId " +
+            "WHERE e.playedAt >= :since GROUP BY s.id ORDER BY plays DESC LIMIT 30"
+    )
+    fun onRepeat(since: Long): Flow<List<SongWithPlays>>
+
+    @Query(
+        "SELECT s.* FROM liked_songs l JOIN songs s ON s.id = l.songId WHERE NOT EXISTS " +
+            "(SELECT 1 FROM play_events e WHERE e.songId = s.id AND e.playedAt >= :since) ORDER BY l.likedAt DESC LIMIT 50"
+    )
+    fun forgottenFavourites(since: Long): Flow<List<Song>>
+
+    @Query(
+        "SELECT s.*, COUNT(*) AS plays FROM play_events e JOIN songs s ON s.id = e.songId " +
+            "WHERE CAST(strftime('%H', e.playedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) >= 22 " +
+            "OR CAST(strftime('%H', e.playedAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < 5 " +
+            "GROUP BY s.id ORDER BY plays DESC LIMIT 40"
+    )
+    fun lateNight(): Flow<List<SongWithPlays>>
+
+    @Query(
+        "SELECT s.* FROM songs s JOIN (SELECT songId, MIN(playedAt) AS firstPlayed FROM play_events GROUP BY songId) f " +
+            "ON f.songId = s.id WHERE f.firstPlayed >= :since ORDER BY f.firstPlayed DESC LIMIT 40"
+    )
+    fun freshFinds(since: Long): Flow<List<Song>>
+
+    @Query("SELECT s.* FROM liked_songs l JOIN songs s ON s.id = l.songId WHERE s.source = 'YOUTUBE'")
+    suspend fun likedYoutubeSongs(): List<Song>
+
     // --- Calendar & Wrapped ----------------------------------------------------------------
 
     @Query("SELECT playedAt, listenedMs FROM play_events WHERE playedAt >= :from AND playedAt < :to")
