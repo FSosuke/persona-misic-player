@@ -289,7 +289,4 @@ interface MusicDao {
 
     @Query("SELECT COUNT(*) FROM play_events WHERE songId = :songId")
     fun playCount(songId: String): Flow<Int>
-
-    @Query("SELECT id FROM playlists WHERE name = :name ORDER BY id LIMIT 1")
-    suspend fun playlistIdByName(name: String): Long?
 }
