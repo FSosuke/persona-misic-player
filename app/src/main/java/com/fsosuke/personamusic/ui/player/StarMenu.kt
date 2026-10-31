@@ -64,7 +64,7 @@ fun StarMenu(visible: Boolean, onDismiss: () -> Unit, entries: List<Pair<String,
             }
             Column(
                 Modifier.align(Alignment.Center).padding(start = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 entries.forEachIndexed { index, (label, action) ->
                     val slide = remember { Animatable(-600f) }

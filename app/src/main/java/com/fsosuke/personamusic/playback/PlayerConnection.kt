@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -35,6 +36,8 @@ class PlayerConnection(private val context: Context) {
         val queue: List<Song> = emptyList(),
         val currentIndex: Int = 0,
         val error: String? = null,
+        val speed: Float = 1f,
+        val pitch: Float = 1f,
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -107,6 +110,8 @@ class PlayerConnection(private val context: Context) {
             queue = queue,
             currentIndex = player.currentMediaItemIndex,
             error = player.playerError?.let { it.localizedMessage ?: it.errorCodeName },
+            speed = player.playbackParameters.speed,
+            pitch = player.playbackParameters.pitch,
         )
         _positionMs.value = player.currentPosition
     }
@@ -157,6 +162,11 @@ class PlayerConnection(private val context: Context) {
     fun removeQueueItem(index: Int) = withController { removeMediaItem(index) }
     fun moveQueueItem(from: Int, to: Int) = withController { moveMediaItem(from, to) }
     fun toggleShuffle() = withController { shuffleModeEnabled = !shuffleModeEnabled }
+
+    /** Tempo and pitch (1 = normal); radio stations always play at normal speed. */
+    fun setSpeed(speed: Float, pitch: Float) = withController {
+        playbackParameters = PlaybackParameters(speed.coerceIn(0.25f, 3f), pitch.coerceIn(0.25f, 3f))
+    }
 
     fun cycleRepeat() = withController {
         repeatMode = when (repeatMode) {

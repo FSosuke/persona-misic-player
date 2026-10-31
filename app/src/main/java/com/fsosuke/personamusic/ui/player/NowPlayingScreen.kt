@@ -77,7 +77,7 @@ import com.fsosuke.personamusic.ui.theme.PersonaFonts
 import com.fsosuke.personamusic.ui.theme.PersonaType
 import kotlinx.coroutines.launch
 
-private enum class PlayerOverlay { Menu, Lyrics, Stats, Sleep }
+private enum class PlayerOverlay { Menu, Lyrics, Stats, Sleep, Speed }
 
 @Composable
 fun NowPlayingScreen(
@@ -132,10 +132,20 @@ fun NowPlayingScreen(
                         .background(Color(0xFF9A9A9A), RoundedCornerShape(3.dp))
                         .clickable(onClick = onClose),
                 )
-                SleepTimerBadge(
-                    onClick = { overlay = PlayerOverlay.Sleep },
-                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp),
-                )
+                Row(Modifier.align(Alignment.CenterStart).padding(start = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SleepTimerBadge(onClick = { overlay = PlayerOverlay.Sleep })
+                    speedLabel(state.speed, state.pitch)?.let { label ->
+                        Box(
+                            Modifier
+                                .rotate(3f)
+                                .background(colors.accent)
+                                .clickable { overlay = PlayerOverlay.Speed }
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(label, color = colors.onAccent, style = PersonaType.label.copy(fontSize = 13.sp))
+                        }
+                    }
+                }
                 IconButton(onClick = { overlay = PlayerOverlay.Menu }, modifier = Modifier.align(Alignment.CenterEnd)) {
                     Icon(Icons.Filled.Star, "Menu", tint = Color.White, modifier = Modifier.size(32.dp))
                 }
@@ -312,6 +322,7 @@ fun NowPlayingScreen(
                 "Playlist" to { overlay = null; addToPlaylist = song != null },
                 "Radio" to { overlay = null; song?.let { startRadio(container, context, it) }; Unit },
                 "Sleep" to { overlay = PlayerOverlay.Sleep },
+                "Speed" to { overlay = if (song?.isRadio == true) null else PlayerOverlay.Speed },
                 (if (isDownloaded) "Delete file" else "Download") to {
                     overlay = null
                     song?.let {
@@ -325,6 +336,7 @@ fun NowPlayingScreen(
             ),
         )
         SleepTimerOverlay(visible = overlay == PlayerOverlay.Sleep, onDismiss = { overlay = null })
+        SpeedOverlay(visible = overlay == PlayerOverlay.Speed, onDismiss = { overlay = null })
         if (song != null) {
             LyricsOverlay(
                 visible = overlay == PlayerOverlay.Lyrics,

@@ -9,6 +9,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -364,6 +365,8 @@ class PlaybackService : MediaLibraryService() {
             historyJob?.cancel()
             mediaItem ?: return
             if (mediaItem.mediaId.startsWith(Radiko.ID_PREFIX)) {
+                // Live streams can't be sped up or slowed down.
+                if (player.playbackParameters != PlaybackParameters.DEFAULT) player.playbackParameters = PlaybackParameters.DEFAULT
                 if (radioJob?.isActive != true || radioMediaId != mediaItem.mediaId) {
                     radioJob?.cancel()
                     radioMediaId = mediaItem.mediaId
