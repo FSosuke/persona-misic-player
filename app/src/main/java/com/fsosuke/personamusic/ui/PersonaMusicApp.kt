@@ -1,5 +1,16 @@
 package com.fsosuke.personamusic.ui
 
+import androidx.activity.compose.BackHandler
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import com.fsosuke.personamusic.ui.components.TakeYourHeartSplash
 import com.fsosuke.personamusic.ui.components.SlashWipe
 import com.fsosuke.personamusic.ui.components.LocalReduceMotion
@@ -31,7 +42,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -76,6 +86,7 @@ import com.fsosuke.personamusic.ui.youtube.YtLoginScreen
 import com.fsosuke.personamusic.ui.youtube.YtPlaylistScreen
 
 private object Routes {
+    const val TABS = "tabs"
     const val PLAYER = "player"
     const val QUEUE = "queue"
     const val DOWNLOADS = "downloads"
@@ -114,8 +125,11 @@ fun PersonaMusicApp() {
     val position by container.player.positionMs.collectAsStateWithLifecycle()
 
     val showChrome = route != Routes.PLAYER && route != Routes.YT_LOGIN && route != Routes.QUEUE && route != Routes.WRAPPED
-    val selectedTab = Tab.entries.firstOrNull { it.route == route }
-        ?: if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS || route == Routes.SMART) Tab.Playlists
+    val reduceMotion by container.settings.reduceMotion.collectAsStateWithLifecycle()
+    val pagerState = rememberPagerState { Tab.entries.size }
+    val scope = rememberCoroutineScope()
+    val selectedTab = if (route == Routes.TABS) Tab.entries[pagerState.targetPage]
+        else if (route == Routes.PLAYLIST || route == Routes.YT_PLAYLIST || route == Routes.DOWNLOADS || route == Routes.SMART) Tab.Playlists
         else if (route == Routes.RADIO_SCHEDULE) Tab.Radio else null
 
     var chromeHeightPx by remember { mutableIntStateOf(0) }
@@ -123,22 +137,19 @@ fun PersonaMusicApp() {
     val padding = PaddingValues(bottom = if (showChrome) chromeHeight else 0.dp)
 
     fun selectTab(tab: Tab) {
-        nav.navigate(tab.route) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+        if (route != Routes.TABS) nav.popBackStack(Routes.TABS, inclusive = false)
+        scope.launch {
+            if (reduceMotion) pagerState.scrollToPage(tab.ordinal) else pagerState.animateScrollToPage(tab.ordinal)
         }
     }
 
     val openArtist: (String, String?) -> Unit = { name, id -> nav.navigate(Routes.artist(name, id)) }
 
-    val reduceMotion by container.settings.reduceMotion.collectAsStateWithLifecycle()
-
     CompositionLocalProvider(LocalOpenArtist provides openArtist, LocalReduceMotion provides reduceMotion) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         NavHost(
             navController = nav,
-            startDestination = Tab.Home.route,
+            startDestination = Routes.TABS,
             enterTransition = {
                 if (reduceMotion) fadeIn(tween(180))
                 else if (targetState.destination.route == Routes.PLAYER) slideInVertically(spring(dampingRatio = 0.8f, stiffness = 500f)) { it } + fadeIn(tween(120))
@@ -157,34 +168,35 @@ fun PersonaMusicApp() {
                 else slideOutHorizontally(tween(220)) { it / 6 } + fadeOut(tween(160))
             },
         ) {
-            composable(Tab.Home.route) {
-                HomeScreen(
-                    onOpenSettings = { nav.navigate(Routes.CUSTOMIZE) },
-                    onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
-                    onSignIn = { nav.navigate(Routes.YT_LOGIN) },
-                    onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
-                    onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
-                    onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
-                    onOpenSocial = { nav.navigate(Routes.SOCIAL) },
-                    contentPadding = padding,
-                )
-            }
-            composable(Tab.Library.route) { LibraryScreen(contentPadding = padding) }
-            composable(Tab.Radio.route) {
-                RadioScreen(contentPadding = padding, onOpenSchedule = { nav.navigate(Routes.radioSchedule(it)) })
+            // The four main areas share one screen and can be swiped between.
+            composable(Routes.TABS) {
+                MainPager(pagerState, reduceMotion) { tab ->
+                    when (tab) {
+                        Tab.Home -> HomeScreen(
+                            onOpenSettings = { nav.navigate(Routes.CUSTOMIZE) },
+                            onOpenYtPlaylist = { nav.navigate(Routes.ytPlaylist(it)) },
+                            onSignIn = { nav.navigate(Routes.YT_LOGIN) },
+                            onOpenConfidants = { nav.navigate(Routes.CONFIDANTS) },
+                            onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
+                            onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
+                            onOpenSocial = { nav.navigate(Routes.SOCIAL) },
+                            contentPadding = padding,
+                        )
+                        Tab.Library -> LibraryScreen(contentPadding = padding)
+                        Tab.Playlists -> PlaylistsScreen(
+                            onOpen = { nav.navigate(Routes.playlist(it)) },
+                            onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
+                            onOpenDownloads = { nav.navigate(Routes.DOWNLOADS) },
+                            onOpenSmart = { nav.navigate("smart/$it") },
+                            contentPadding = padding,
+                        )
+                        Tab.Radio -> RadioScreen(contentPadding = padding, onOpenSchedule = { nav.navigate(Routes.radioSchedule(it)) })
+                    }
+                }
             }
             composable(Routes.RADIO_SCHEDULE, arguments = listOf(navArgument("station") { type = NavType.StringType })) { entry ->
                 val station = entry.arguments?.getString("station")?.let { runCatching { JSONObject(it).toStation() }.getOrNull() }
                 if (station != null) RadioScheduleScreen(station, onBack = { nav.popBackStack() }, contentPadding = padding)
-            }
-            composable(Tab.Playlists.route) {
-                PlaylistsScreen(
-                    onOpen = { nav.navigate(Routes.playlist(it)) },
-                    onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
-                    onOpenDownloads = { nav.navigate(Routes.DOWNLOADS) },
-                    onOpenSmart = { nav.navigate("smart/$it") },
-                    contentPadding = padding,
-                )
             }
             composable(Routes.PLAYLIST, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
                 PlaylistDetailScreen(
@@ -299,5 +311,61 @@ fun PersonaMusicApp() {
         RankUpOverlay()
         StatUpOverlay()
     }
+    }
+}
+
+/**
+ * Home, Library, Playlists and Radio side by side: swipe left/right to switch. Pages tilt and
+ * shrink a little while moving, and a red slash runs along the seam.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MainPager(state: PagerState, reduceMotion: Boolean, page: @Composable (Tab) -> Unit) {
+    val colors = LocalPersonaColors.current
+    val scope = rememberCoroutineScope()
+    // Back on another area returns to Home first, like the bottom bar used to.
+    BackHandler(enabled = state.currentPage != 0) { scope.launch { state.animateScrollToPage(0) } }
+    Box(Modifier.fillMaxSize()) {
+        HorizontalPager(
+            state = state,
+            beyondViewportPageCount = 1,
+            key = { Tab.entries[it].route },
+            modifier = Modifier.fillMaxSize(),
+        ) { index ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (reduceMotion) return@graphicsLayer
+                        val offset = (state.currentPage - index) + state.currentPageOffsetFraction
+                        val amount = offset.coerceIn(-1f, 1f)
+                        rotationZ = amount * 4f
+                        val s = 1f - 0.08f * kotlin.math.abs(amount)
+                        scaleX = s
+                        scaleY = s
+                    },
+            ) { page(Tab.entries[index]) }
+        }
+        if (!reduceMotion) {
+            Canvas(Modifier.fillMaxSize()) {
+                val fraction = state.currentPageOffsetFraction
+                if (kotlin.math.abs(fraction) < 0.01f) return@Canvas
+                val w = size.width
+                val h = size.height
+                // Where the current page ends and the next begins.
+                val seam = if (fraction > 0) w * (1f - fraction) else w * -fraction
+                val band = w * 0.07f
+                fun slash(x: Float, width: Float) = Path().apply {
+                    moveTo(x + w * 0.12f, 0f)
+                    lineTo(x + w * 0.12f + width, 0f)
+                    lineTo(x - w * 0.12f + width, h)
+                    lineTo(x - w * 0.12f, h)
+                    close()
+                }
+                drawPath(slash(seam - band / 2, band), colors.accent)
+                drawPath(slash(seam + band / 2, band * 0.25f), Color.White)
+                drawPath(slash(seam - band / 2 - band * 0.3f, band * 0.3f), Color.Black)
+            }
+        }
     }
 }
