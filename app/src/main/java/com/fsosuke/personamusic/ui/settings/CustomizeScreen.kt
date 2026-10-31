@@ -144,6 +144,7 @@ fun CustomizeScreen(onBack: () -> Unit, onSignIn: () -> Unit, onOpenHidden: () -
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = Color(0xFF888888))
             }
         }
+        item { MotionSection() }
         item { CalloutBanner("Recommendations", Modifier.padding(start = 12.dp, top = 20.dp), pointLeft = true) }
         item { RecommendationsSection(onOpenHidden) }
         item { ReleaseRadarSection() }
@@ -318,6 +319,20 @@ private fun BackgroundRow(label: String, path: String?, tint: Color?, onPick: ()
 }
 
 /** The author's calling-card signature at the bottom of the settings. */
+@Composable
+private fun MotionSection() {
+    val settings = LocalAppContainer.current.settings
+    val reduce by settings.reduceMotion.collectAsStateWithLifecycle()
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+        SettingSwitch(
+            title = "Reduce animations",
+            description = "No slash wipes, \"Take your heart\" splash or swaying covers – calmer and easier on the battery.",
+            checked = reduce,
+            onChange = settings::setReduceMotion,
+        )
+    }
+}
+
 /** Shows up only after a crash: share the report or dismiss it. */
 @Composable
 private fun CrashSection() {

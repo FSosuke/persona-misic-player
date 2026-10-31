@@ -1,5 +1,11 @@
 package com.fsosuke.personamusic.ui
 
+import com.fsosuke.personamusic.ui.components.TakeYourHeartSplash
+import com.fsosuke.personamusic.ui.components.SlashWipe
+import com.fsosuke.personamusic.ui.components.LocalReduceMotion
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -126,13 +132,30 @@ fun PersonaMusicApp() {
 
     val openArtist: (String, String?) -> Unit = { name, id -> nav.navigate(Routes.artist(name, id)) }
 
-    CompositionLocalProvider(LocalOpenArtist provides openArtist) {
+    val reduceMotion by container.settings.reduceMotion.collectAsStateWithLifecycle()
+
+    CompositionLocalProvider(LocalOpenArtist provides openArtist, LocalReduceMotion provides reduceMotion) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         NavHost(
             navController = nav,
             startDestination = Tab.Home.route,
-            enterTransition = { fadeIn(tween(180)) },
-            exitTransition = { fadeOut(tween(120)) },
+            enterTransition = {
+                if (reduceMotion) fadeIn(tween(180))
+                else if (targetState.destination.route == Routes.PLAYER) slideInVertically(spring(dampingRatio = 0.8f, stiffness = 500f)) { it } + fadeIn(tween(120))
+                else slideInHorizontally(tween(260)) { it / 6 } + fadeIn(tween(200))
+            },
+            exitTransition = {
+                if (reduceMotion || initialState.destination.route == Routes.PLAYER) fadeOut(tween(120))
+                else slideOutHorizontally(tween(220)) { -it / 10 } + fadeOut(tween(160))
+            },
+            popEnterTransition = {
+                if (reduceMotion) fadeIn(tween(180)) else slideInHorizontally(tween(260)) { -it / 6 } + fadeIn(tween(200))
+            },
+            popExitTransition = {
+                if (reduceMotion) fadeOut(tween(120))
+                else if (initialState.destination.route == Routes.PLAYER) slideOutVertically(tween(260)) { it } + fadeOut(tween(220))
+                else slideOutHorizontally(tween(220)) { it / 6 } + fadeOut(tween(160))
+            },
         ) {
             composable(Tab.Home.route) {
                 HomeScreen(
@@ -270,6 +293,9 @@ fun PersonaMusicApp() {
             }
         }
 
+        // Slash wipe between screens (not for the player, which slides up on its own).
+        SlashWipe(trigger = route?.takeIf { it != Routes.PLAYER && it != Routes.QUEUE })
+        TakeYourHeartSplash()
         RankUpOverlay()
         StatUpOverlay()
     }

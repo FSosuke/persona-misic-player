@@ -102,8 +102,12 @@ class AppContainer(context: Context) {
     val updates = UpdateManager(context, httpClient, appScope)
 
     /** Heart a song locally and, for YouTube songs, on the signed-in YouTube Music account too. */
+    /** Fires for every newly hearted song (drives the "Take your heart" splash). */
+    val likeEvents = kotlinx.coroutines.flow.MutableSharedFlow<Song>(extraBufferCapacity = 1)
+
     suspend fun setLiked(song: Song, liked: Boolean) {
         repository.setLiked(song, liked)
+        if (liked) likeEvents.tryEmit(song)
         if (liked && song.source == com.fsosuke.personamusic.data.SongSource.YOUTUBE) autoDownload.runSoon()
         if (settings.syncLikes.value && ytAccounts.cookie != null) {
             runCatching { ytLibrary.rate(song, liked) }

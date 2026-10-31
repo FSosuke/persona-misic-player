@@ -153,6 +153,15 @@ class AppSettings(context: Context) {
         _radikoArea.value = value
     }
 
+    private val _reduceMotion = MutableStateFlow(prefs.getBoolean(KEY_REDUCE_MOTION, false))
+    /** Calmer UI: no slash wipes, splashes or wobbling. */
+    val reduceMotion: StateFlow<Boolean> = _reduceMotion.asStateFlow()
+
+    fun setReduceMotion(value: Boolean) {
+        prefs.edit().putBoolean(KEY_REDUCE_MOTION, value).apply()
+        _reduceMotion.value = value
+    }
+
     private val _japaneseOnly = MutableStateFlow(prefs.getBoolean(KEY_JAPANESE_ONLY, false))
     /** Only recommend / auto-play Japanese music (plus artists the user already listens to). */
     val japaneseOnly: StateFlow<Boolean> = _japaneseOnly.asStateFlow()
@@ -211,6 +220,7 @@ class AppSettings(context: Context) {
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_JAPANESE_ONLY = "japanese_only"
         const val KEY_HOME_REGION = "home_region"
+        const val KEY_REDUCE_MOTION = "reduce_motion"
         const val KEY_RADIKO_AREA = "radiko_area"
         const val KEY_RELEASE_RADAR = "release_radar"
         const val KEY_BACKUP_FOLDER = "backup_folder"

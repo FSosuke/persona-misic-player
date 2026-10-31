@@ -57,7 +57,7 @@ fun PersonaHeader(
             Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, bottom = 12.dp)) {
                 Box(Modifier.fillMaxWidth().height(72.dp)) {
                     Column(
-                        Modifier.align(Alignment.Center).rotate(-3f),
+                        Modifier.align(Alignment.Center).popIn(title).rotate(-3f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Box(Modifier.background(Color.Black).padding(horizontal = 12.dp, vertical = 2.dp)) {

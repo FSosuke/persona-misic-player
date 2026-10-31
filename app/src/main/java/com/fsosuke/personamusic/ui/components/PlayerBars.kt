@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.components
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -118,7 +120,12 @@ fun PersonaBottomBar(selected: Tab?, onSelect: (Tab) -> Unit, modifier: Modifier
     ) {
         Tab.entries.forEach { tab ->
             val isSelected = tab == selected
-            val scale by animateFloatAsState(if (isSelected) 1.2f else 1f, label = "tabScale")
+            // Springy, like the game's menu icons popping when picked.
+            val scale by animateFloatAsState(
+                if (isSelected) 1.2f else 1f,
+                if (LocalReduceMotion.current) tween(150) else spring(dampingRatio = 0.3f, stiffness = 500f),
+                label = "tabScale",
+            )
             Box(
                 Modifier
                     .weight(1f)
