@@ -53,7 +53,7 @@ fun PersonaHeader(
 ) {
     val colors = LocalPersonaColors.current
     Column(modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().starPattern(colors.patternBackground, colors.pattern)) {
+        Box(Modifier.fillMaxWidth().starPattern(colors.patternBackground, colors.pattern, drifting = true)) {
             Column(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 8.dp, bottom = 12.dp)) {
                 Box(Modifier.fillMaxWidth().height(72.dp)) {
                     Column(

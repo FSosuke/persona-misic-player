@@ -4,15 +4,14 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Five-pointed star outline -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,24 L61.6,44.6 L83,45.3 L66.2,58.6 L72.3,79.6 L54,67.5 L35.7,79.6 L41.8,58.6 L25,45.3 L46.4,44.6 Z" />
-    <path
-        android:fillColor="#0B0B0B"
-        android:pathData="M54,33 L59,47.4 L74,48 L62.2,57.3 L66.4,72 L54,63.6 L41.6,72 L45.8,57.3 L34,48 L49,47.4 Z" />
-    <!-- Music note -->
-    <path
-        android:fillColor="#E60012"
-        android:pathData="M52,44 L60,42 L60,46 L55,47.3 L55,59 A4,3.5 0 1,1 52,55.7 Z" />
+    <!-- "01": a split record (the 0) and a blade-like 1, tilted like a calling card -->
+    <group android:rotation="-8" android:pivotX="54" android:pivotY="54">
+        <group android:translateX="1.6" android:translateY="1.6">
+            <path android:fillColor="#000000" android:pathData="M41.2,35 A19,19 0 0,0 41.2,73 L41.2,64.5 A10.5,10.5 0 0,1 41.2,43.5 Z M44.8,35 A19,19 0 0,1 44.8,73 L44.8,64.5 A10.5,10.5 0 0,0 44.8,43.5 Z M70,35 L80,35 L80,73 L70,73 L70,46 L64,49.5 L64,41 Z" />
+        </group>
+        <path android:fillColor="#FFFFFF" android:pathData="M41.2,35 A19,19 0 0,0 41.2,73 L41.2,64.5 A10.5,10.5 0 0,1 41.2,43.5 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M44.8,35 A19,19 0 0,1 44.8,73 L44.8,64.5 A10.5,10.5 0 0,0 44.8,43.5 Z" />
+        <path android:fillColor="#E60012" android:pathData="M43,50.8 A3.2,3.2 0 1,1 43,57.2 A3.2,3.2 0 1,1 43,50.8 Z" />
+        <path android:fillColor="#FFE100" android:pathData="M70,35 L80,35 L80,73 L70,73 L70,46 L64,49.5 L64,41 Z" />
+    </group>
 </vector>

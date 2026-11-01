@@ -68,25 +68,6 @@ fun Modifier.popIn(key: Any? = Unit, delayMs: Long = 0, fromRotation: Float = -1
     }
 }
 
-/** Gentle sway and pulse for the cover while music plays. */
-fun Modifier.breathing(active: Boolean): Modifier = composed {
-    if (LocalReduceMotion.current) return@composed this
-    val transition = rememberInfiniteTransition(label = "breathing")
-    val phase by transition.animateFloat(
-        0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart), label = "phase",
-    )
-    val amount = remember { Animatable(0f) }
-    LaunchedEffect(active) { amount.animateTo(if (active) 1f else 0f, tween(500)) }
-    graphicsLayer {
-        val wave = sin(phase * 2 * PI).toFloat()
-        val beat = (cos(phase * 4 * PI).toFloat() + 1f) / 2f
-        val s = 1f + 0.018f * beat * amount.value
-        scaleX = s
-        scaleY = s
-        rotationZ = 1.2f * wave * amount.value
-    }
-}
-
 /**
  * Red/black/white slash that sweeps over the screen whenever [trigger] changes (the first
  * value is ignored) – Persona 5's menu transition.

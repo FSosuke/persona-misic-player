@@ -1,5 +1,16 @@
 package com.fsosuke.personamusic.ui.components
 
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.State
+import androidx.compose.ui.composed
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,44 +46,74 @@ import kotlin.random.Random
 // Hand-drawn Persona 5 style decorations. Everything is vector code: no game assets are shipped.
 
 /** Black base with big red diagonal slashes, like the P5 phone / pause screens. */
-fun Modifier.phantomSlashes(colors: PersonaColors): Modifier = drawWithCache {
-    val w = size.width
-    val h = size.height
-    fun poly(vararg p: Pair<Float, Float>) = Path().apply {
-        p.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x * w, y * h) else lineTo(x * w, y * h) }
-        close()
-    }
-    val dark = colors.accent.copy(red = colors.accent.red * 0.55f, green = colors.accent.green * 0.4f, blue = colors.accent.blue * 0.4f)
-    val slashes = listOf(
-        poly(0f to 0.05f, 0.55f to 0f, 0.15f to 0.38f, 0f to 0.42f) to dark,
-        poly(0.6f to 0f, 1f to 0f, 1f to 0.12f, 0.25f to 0.62f, 0.12f to 0.6f) to colors.accent,
-        poly(1f to 0.35f, 1f to 0.55f, 0.2f to 1f, 0f to 1f, 0f to 0.92f) to dark,
-        poly(0.7f to 0.7f, 1f to 0.62f, 1f to 0.8f, 0.55f to 1f, 0.4f to 1f) to colors.accent,
-        poly(0f to 0.55f, 0.35f to 0.48f, 0f to 0.72f) to colors.accent.copy(alpha = 0.8f),
-    )
-    onDrawBehind {
-        drawRect(Color(0xFF070707))
-        slashes.forEach { (path, color) -> drawPath(path, color) }
+fun Modifier.phantomSlashes(colors: PersonaColors): Modifier = composed {
+    val drift = rememberDrift(periodMs = 26_000)
+    drawWithCache {
+        val w = size.width
+        val h = size.height
+        fun poly(vararg p: Pair<Float, Float>) = Path().apply {
+            p.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x * w, y * h) else lineTo(x * w, y * h) }
+            close()
+        }
+        val dark = colors.accent.copy(red = colors.accent.red * 0.55f, green = colors.accent.green * 0.4f, blue = colors.accent.blue * 0.4f)
+        val slashes = listOf(
+            poly(0f to 0.05f, 0.55f to 0f, 0.15f to 0.38f, 0f to 0.42f) to dark,
+            poly(0.6f to 0f, 1f to 0f, 1f to 0.12f, 0.25f to 0.62f, 0.12f to 0.6f) to colors.accent,
+            poly(1f to 0.35f, 1f to 0.55f, 0.2f to 1f, 0f to 1f, 0f to 0.92f) to dark,
+            poly(0.7f to 0.7f, 1f to 0.62f, 1f to 0.8f, 0.55f to 1f, 0.4f to 1f) to colors.accent,
+            poly(0f to 0.55f, 0.35f to 0.48f, 0f to 0.72f) to colors.accent.copy(alpha = 0.8f),
+        )
+        onDrawBehind {
+            drawRect(Color(0xFF070707))
+            drawDrifting(drift.value * w, w) { slashes.forEach { (path, color) -> drawPath(path, color) } }
+        }
     }
 }
 
 /** Accent background with big darker swooshes (queue screen). */
-fun Modifier.redSwirls(colors: PersonaColors): Modifier = drawWithCache {
-    val w = size.width
-    val h = size.height
-    val swirl = colors.accent.copy(red = colors.accent.red * 0.72f, green = colors.accent.green * 0.6f, blue = colors.accent.blue * 0.6f)
-    val paths = (0 until 4).map { i ->
-        val top = h * (0.15f + i * 0.24f)
-        Path().apply {
-            moveTo(w * 0.35f, top)
-            cubicTo(w * 1.1f, top - h * 0.12f, w * 1.15f, top + h * 0.22f, w * 0.55f, top + h * 0.2f)
-            cubicTo(w * 0.85f, top + h * 0.12f, w * 0.9f, top + h * 0.02f, w * 0.35f, top)
-            close()
+fun Modifier.redSwirls(colors: PersonaColors): Modifier = composed {
+    val drift = rememberDrift(periodMs = 32_000)
+    drawWithCache {
+        val w = size.width
+        val h = size.height
+        val swirl = colors.accent.copy(red = colors.accent.red * 0.72f, green = colors.accent.green * 0.6f, blue = colors.accent.blue * 0.6f)
+        val paths = (0 until 4).map { i ->
+            val top = h * (0.15f + i * 0.24f)
+            Path().apply {
+                moveTo(w * 0.35f, top)
+                cubicTo(w * 1.1f, top - h * 0.12f, w * 1.15f, top + h * 0.22f, w * 0.55f, top + h * 0.2f)
+                cubicTo(w * 0.85f, top + h * 0.12f, w * 0.9f, top + h * 0.02f, w * 0.35f, top)
+                close()
+            }
+        }
+        onDrawBehind {
+            drawRect(colors.accent)
+            drawDrifting(drift.value * w, w) { paths.forEach { drawPath(it, swirl) } }
         }
     }
-    onDrawBehind {
-        drawRect(colors.accent)
-        paths.forEach { drawPath(it, swirl) }
+}
+
+/**
+ * Slowly moving backgrounds like the game's menus: a value running 0→1 over [periodMs], again
+ * and again (stays 0 with "Reduce animations").
+ */
+@Composable
+fun rememberDrift(periodMs: Int): State<Float> {
+    if (LocalReduceMotion.current) return remember { mutableFloatStateOf(0f) }
+    val transition = rememberInfiniteTransition(label = "drift")
+    return transition.animateFloat(
+        0f, 1f, infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart), label = "driftValue",
+    )
+}
+
+/**
+ * Draws [content] (laid out for one screen width) shifted right by [shift] and once more one
+ * width to the left, so shapes leaving on the right come back in from the left.
+ */
+fun DrawScope.drawDrifting(shift: Float, width: Float, content: DrawScope.() -> Unit) {
+    clipRect {
+        translate(left = shift) { content() }
+        translate(left = shift - width) { content() }
     }
 }
 

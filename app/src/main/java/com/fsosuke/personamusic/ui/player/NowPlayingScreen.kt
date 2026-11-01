@@ -1,7 +1,5 @@
 package com.fsosuke.personamusic.ui.player
 
-import com.fsosuke.personamusic.ui.components.breathing
-import com.fsosuke.personamusic.ui.components.popIn
 import com.fsosuke.personamusic.playback.isRadio
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
@@ -163,10 +161,7 @@ fun NowPlayingScreen(
                 Box(
                     Modifier
                         .fillMaxHeight(0.92f)
-                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                        // New song: the cover card flies in; while playing it sways to the music.
-                        .popIn(song.id, fromRotation = -18f)
-                        .breathing(state.isPlaying),
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true),
                 ) {
                     Box(Modifier.fillMaxSize().rotate(-3f).offset(8.dp, 10.dp).background(Color.Black))
                     Artwork(
