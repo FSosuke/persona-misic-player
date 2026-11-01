@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui
 
+import com.fsosuke.personamusic.ui.velvet.VelvetRoomScreen
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
@@ -95,6 +96,7 @@ private object Routes {
     const val CALENDAR = "calendar"
     const val SOUND = "sound"
     const val SOCIAL = "social"
+    const val VELVET = "velvet"
     const val SMART = "smart/{id}"
     const val RADIO_SCHEDULE = "radio_schedule?station={station}"
     fun radioSchedule(station: RadikoStation) = "radio_schedule?station=" + Uri.encode(station.toJson().toString())
@@ -180,6 +182,7 @@ fun PersonaMusicApp() {
                             onOpenCalendar = { nav.navigate(Routes.CALENDAR) },
                             onOpenWrapped = { nav.navigate(Routes.wrapped(it)) },
                             onOpenSocial = { nav.navigate(Routes.SOCIAL) },
+                            onOpenVelvet = { nav.navigate(Routes.VELVET) },
                             contentPadding = padding,
                         )
                         Tab.Library -> LibraryScreen(contentPadding = padding)
@@ -275,6 +278,7 @@ fun PersonaMusicApp() {
                 SmartPlaylistScreen(smart, onBack = { nav.popBackStack() }, contentPadding = padding)
             }
             composable(Routes.SOCIAL) { SocialStatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
+            composable(Routes.VELVET) { VelvetRoomScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.SOUND) { SoundScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.HIDDEN) { HiddenScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.CONFIDANTS) { ConfidantsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }

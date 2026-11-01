@@ -13,8 +13,8 @@ android {
         applicationId = "com.fsosuke.personamusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 31
-        versionName = "0.26.0"
+        versionCode = 32
+        versionName = "0.27.0"
 
         // Where the in-app updater looks for new releases: CI passes the public releases repo
         // (UPDATE_REPO) or falls back to the source repo.
@@ -59,7 +59,8 @@ android {
         buildConfig = true
     }
     packaging {
-        resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/CONTRIBUTORS.md", "META-INF/LICENSE.md", "META-INF/NOTICE.md")
+        resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/CONTRIBUTORS.md", "META-INF/LICENSE.md", "META-INF/NOTICE.md",
+            "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/DEPENDENCIES", "META-INF/INDEX.LIST")
     }
 }
 
@@ -97,6 +98,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
+    implementation(libs.anthropic.java)
     implementation(libs.newpipe.extractor)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.guava)

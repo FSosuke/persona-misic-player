@@ -20,3 +20,13 @@
 
 # Kuromoji (romaji lyrics) loads its dictionary resources relative to its own classes.
 -keep class com.atilika.kuromoji.** { *; }
+
+# Anthropic Java SDK ("Igor speaks"): Jackson-based (de)serialization of the API models.
+-keep class com.anthropic.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-keepattributes Signature, *Annotation*, InnerClasses, EnclosingMethod
+-dontwarn com.anthropic.**
+-dontwarn com.fasterxml.jackson.**
+-dontwarn java.lang.management.**
+-dontwarn javax.annotation.**
+-dontwarn kotlin.reflect.jvm.internal.**

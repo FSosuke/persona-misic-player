@@ -289,4 +289,10 @@ interface MusicDao {
 
     @Query("SELECT COUNT(*) FROM play_events WHERE songId = :songId")
     fun playCount(songId: String): Flow<Int>
+
+    @Query("SELECT DISTINCT songId FROM play_events")
+    suspend fun playedSongIds(): List<String>
+
+    @Query("SELECT songId FROM liked_songs")
+    suspend fun likedSongIds(): List<String>
 }

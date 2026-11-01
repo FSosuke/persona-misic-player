@@ -100,6 +100,7 @@ fun HomeScreen(
     onOpenCalendar: () -> Unit,
     onOpenWrapped: (WrappedPeriod) -> Unit,
     onOpenSocial: () -> Unit,
+    onOpenVelvet: () -> Unit,
     contentPadding: PaddingValues,
 ) {
     val container = LocalAppContainer.current
@@ -211,6 +212,7 @@ fun HomeScreen(
                     item { PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true) }
                     item { PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) }) }
                     item { PersonaButton("★ Social stats", onClick = onOpenSocial, inverted = true) }
+                    item { PersonaButton("🦋 Velvet Room", onClick = onOpenVelvet) }
                 }
             }
             if (radioStations.isNotEmpty()) {

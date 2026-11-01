@@ -51,6 +51,20 @@ class MusicRepository(
     }
 
     suspend fun playlistIdByName(name: String) = dao.playlistIdByName(name)
+
+    /** Plays (with listened time) in the window, oldest first. */
+    suspend fun playsBetween(from: Long, to: Long) = dao.playsBetweenNow(from, to)
+    suspend fun playedSongIds() = dao.playedSongIds().toSet()
+    suspend fun likedSongIds() = dao.likedSongIds().toSet()
+
+    /** Fills the local playlist [name] (created if missing) with exactly [songs]. */
+    suspend fun replacePlaylist(name: String, songs: List<Song>): Long {
+        dao.upsertSongs(songs)
+        val id = dao.playlistIdByName(name) ?: dao.insertPlaylist(Playlist(name = name))
+        dao.clearPlaylist(id)
+        songs.distinctBy { it.id }.forEachIndexed { i, song -> dao.insertEntry(PlaylistEntry(id, song.id, i)) }
+        return id
+    }
     suspend fun createPlaylist(name: String): Long = dao.insertPlaylist(Playlist(name = name))
     suspend fun renamePlaylist(id: Long, name: String) = dao.renamePlaylist(id, name)
     suspend fun deletePlaylist(id: Long) {

@@ -1,4 +1,5 @@
 [versions]
+anthropic = "3.2.0"
 agp = "8.7.3"
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.28"
@@ -20,6 +21,7 @@ work = "2.10.0"
 junit = "4.13.2"
 
 [libraries]
+anthropic-java = { module = "com.anthropic:anthropic-java", version.ref = "anthropic" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
