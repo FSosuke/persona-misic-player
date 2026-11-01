@@ -30,3 +30,10 @@
 -dontwarn java.lang.management.**
 -dontwarn javax.annotation.**
 -dontwarn kotlin.reflect.jvm.internal.**
+# Optional SDK dependencies we don't use (OpenTelemetry's AutoValue, JSON-schema generator
+# for structured outputs) reference classes that don't exist on Android.
+-dontwarn com.google.auto.value.**
+-dontwarn java.lang.reflect.AnnotatedType
+-dontwarn java.lang.reflect.AnnotatedParameterizedType
+-dontwarn com.github.victools.jsonschema.**
+-dontwarn io.opentelemetry.**
