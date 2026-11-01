@@ -8,7 +8,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /** The arcana a listening profile can fall under, with Igor's reading of it. */
-enum class Arcana(val numeral: String, val title: String, val japanese: String, val reading: String) {
+enum class ListeningArcana(val numeral: String, val title: String, val japanese: String, val reading: String) {
     Fool("0", "The Fool", "愚者", "A traveller with no map. You keep walking into music you've never heard – every week brings strangers who become companions."),
     Magician("I", "The Magician", "魔術師", "Many voices answer your call. You weave dozens of artists together and none of them holds you for long."),
     Priestess("II", "The Priestess", "女教皇", "You keep to one language of sound. Your world is deep rather than wide, and you know its corners by heart."),
@@ -24,8 +24,8 @@ enum class Arcana(val numeral: String, val title: String, val japanese: String, 
 data class Trait(val label: String, val japanese: String, val value: Float)
 
 data class ListeningReading(
-    val arcana: Arcana,
-    val runnerUp: Arcana?,
+    val arcana: ListeningArcana,
+    val runnerUp: ListeningArcana?,
     val traits: List<Trait>,
     val patterns: List<String>,
     /** Plain facts for "Igor speaks" (no personal data beyond the music). */
@@ -73,16 +73,16 @@ object VelvetRoom {
 
         // How strongly each arcana fits, roughly 0..1.
         val scores = mapOf(
-            Arcana.Fool to discovery * 1.1f,
-            Arcana.Magician to diversity * 1.4f,
-            Arcana.Priestess to if (japanese > 0.85f) japanese * 0.9f else 0f,
-            Arcana.Lovers to loyalty * 2.2f,
-            Arcana.Chariot to skip * 1.8f,
-            Arcana.Hermit to ((repeat - 1f) / 5f).coerceIn(0f, 1f),
-            Arcana.Star to likeRate * 1.2f,
-            Arcana.Moon to night * 1.9f,
-            Arcana.Sun to morning * 2.2f,
-            Arcana.Fortune to 0.35f,
+            ListeningArcana.Fool to discovery * 1.1f,
+            ListeningArcana.Magician to diversity * 1.4f,
+            ListeningArcana.Priestess to if (japanese > 0.85f) japanese * 0.9f else 0f,
+            ListeningArcana.Lovers to loyalty * 2.2f,
+            ListeningArcana.Chariot to skip * 1.8f,
+            ListeningArcana.Hermit to ((repeat - 1f) / 5f).coerceIn(0f, 1f),
+            ListeningArcana.Star to likeRate * 1.2f,
+            ListeningArcana.Moon to night * 1.9f,
+            ListeningArcana.Sun to morning * 2.2f,
+            ListeningArcana.Fortune to 0.35f,
         ).entries.sortedByDescending { it.value }
 
         val traits = listOf(
@@ -114,7 +114,7 @@ object VelvetRoom {
             add("New artists this month: " + newArtists.take(8).joinToString().ifEmpty { "none" })
             add("Peak listening: ${dayName(peakDay)} around $peakHour:00; night share ${pct(night)}, morning share ${pct(morning)}")
             add("Japanese share ${pct(japanese)}, skip rate ${pct(skip)}, songs liked $likedCount")
-            add("Arcana by rules: ${scores[0].key.title}, runner-up ${scores[1].key.title}")
+            add("ListeningArcana by rules: ${scores[0].key.title}, runner-up ${scores[1].key.title}")
         }
         return ListeningReading(scores[0].key, scores[1].key.takeIf { scores[1].value > 0.3f }, traits, patterns, facts, plays.size)
     }

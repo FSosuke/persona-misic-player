@@ -1,6 +1,6 @@
 package com.fsosuke.personamusic
 
-import com.fsosuke.personamusic.data.Arcana
+import com.fsosuke.personamusic.data.ListeningArcana
 import com.fsosuke.personamusic.data.PlayRecord
 import com.fsosuke.personamusic.data.Song
 import com.fsosuke.personamusic.data.SongSource
@@ -28,13 +28,13 @@ class VelvetRoomTest {
     fun nightListenerIsTheMoon() {
         val plays = List(40) { PlayRecord(song(it % 20, "Artist ${it % 10}"), at(1 + it % 20, 23), 200_000) }
         val reading = VelvetRoom.read(plays, likedCount = 0, now = at(25, 0), zone = ZoneOffset.UTC)!!
-        assertEquals(Arcana.Moon, reading.arcana)
+        assertEquals(ListeningArcana.Moon, reading.arcana)
     }
 
     @Test
     fun oneArtistIsTheLovers() {
         val plays = List(40) { PlayRecord(song(it % 30, if (it % 5 == 0) "Other $it" else "LiSA"), at(1 + it % 20, 15), 200_000) }
         val reading = VelvetRoom.read(plays, likedCount = 0, now = at(25, 0), zone = ZoneOffset.UTC)!!
-        assertEquals(Arcana.Lovers, reading.arcana)
+        assertEquals(ListeningArcana.Lovers, reading.arcana)
     }
 }
