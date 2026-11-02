@@ -156,7 +156,7 @@ fun HomeScreen(
             .fold({ AwaState.Loaded(it) }, { AwaState.Failed(it.localizedMessage ?: it.javaClass.simpleName) })
     }
     suspend fun findOnYouTube(track: AwaTrack): Song? =
-        runCatching { container.ytLibrary.search(track.query).songs.firstOrNull() }.getOrNull()
+        runCatching { container.ytLibrary.findSong(track.title, track.artist) }.getOrNull()
     val radioStations by container.radioFavourites.stations.collectAsStateWithLifecycle()
     val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
 

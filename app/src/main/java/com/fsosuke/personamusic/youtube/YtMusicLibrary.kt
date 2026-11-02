@@ -348,6 +348,36 @@ class YtMusicLibrary(
         )
     }
 
+    /**
+     * The YouTube Music version of a song known only by [title] and [artist] (AWA charts, Igor's
+     * suggestions): looks at the top result too, prefers a matching artist and falls back to the
+     * songs-only search.
+     */
+    suspend fun findSong(title: String, artist: String?): Song? {
+        val query = listOfNotNull(title, artist?.takeIf { it.isNotBlank() }).joinToString(" ")
+        val results = runCatching { search(query) }.getOrNull()
+        val candidates = buildList {
+            (results?.top as? YtItem.SongItem)?.let { add(it.song) }
+            results?.songs?.let { addAll(it) }
+        }.ifEmpty {
+            runCatching { searchFiltered(query, SearchKind.Songs, null) }.getOrDefault(emptyList())
+                .filterIsInstance<YtItem.SongItem>().map { it.song }
+        }.ifEmpty {
+            runCatching { youTube.searchSongs(query) }.getOrDefault(emptyList())
+        }
+        fun norm(text: String) = text.lowercase().replace(Regex("[\\s\\p{Punct}（）「」『』・、。！？]"), "")
+        val wantedArtist = artist?.let(::norm).orEmpty()
+        val wantedTitle = norm(title.substringBefore(" (").substringBefore("（"))
+        return candidates.maxByOrNull { song ->
+            var score = 0
+            val songArtist = norm(song.artist)
+            if (wantedArtist.isNotEmpty() && (songArtist.contains(wantedArtist) || wantedArtist.contains(songArtist))) score += 2
+            val songTitle = norm(song.title)
+            if (wantedTitle.isNotEmpty() && (songTitle.contains(wantedTitle) || wantedTitle.contains(songTitle))) score += 1
+            score
+        }
+    }
+
     /** One category only ("all songs", "all albums", …), using the params the full search handed out. */
     suspend fun searchFiltered(query: String, kind: SearchKind, params: String?): List<YtItem> {
         val json = api.post("search", accounts.cookie, JSONObject().put("query", query).put("params", params ?: kind.defaultParams))

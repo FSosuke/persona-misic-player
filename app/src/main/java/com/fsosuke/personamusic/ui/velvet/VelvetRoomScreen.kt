@@ -289,7 +289,10 @@ private fun IgorSpeaks(reading: ListeningReading) {
                         if (!loadingSuggestions) scope.launch {
                             loadingSuggestions = true
                             val songs: List<Song> = speech.suggestions.mapNotNull { query ->
-                                runCatching { container.ytLibrary.search(query).songs.firstOrNull() }.getOrNull()
+                                runCatching {
+                                    val parts = query.split(" - ", limit = 2)
+                                    if (parts.size == 2) container.ytLibrary.findSong(parts[1], parts[0]) else container.ytLibrary.findSong(query, null)
+                                }.getOrNull()
                             }
                             loadingSuggestions = false
                             if (songs.isEmpty()) Toast.makeText(context, "Couldn't find them on YouTube Music.", Toast.LENGTH_SHORT).show()

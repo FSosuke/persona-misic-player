@@ -21,7 +21,6 @@ import com.fsosuke.personamusic.MainActivity
 import com.fsosuke.personamusic.R
 import com.fsosuke.personamusic.data.MusicRepository
 import com.fsosuke.personamusic.data.Song
-import com.fsosuke.personamusic.youtube.YtItem
 import com.fsosuke.personamusic.youtube.YtMusicLibrary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,8 +86,7 @@ class RadioFinds(
 
     /** Returns the matched YouTube Music song, or null if nothing fitting was found. */
     suspend fun save(title: String, artist: String?): Song? {
-        val results = ytLibrary.search(listOfNotNull(title, artist).joinToString(" "))
-        val song = (results.top as? YtItem.SongItem)?.song ?: results.songs.firstOrNull() ?: return null
+        val song = ytLibrary.findSong(title, artist) ?: return null
         like(song)
         val playlistId = repository.playlistIdByName(PLAYLIST) ?: repository.createPlaylist(PLAYLIST)
         repository.addToPlaylist(playlistId, song)
