@@ -35,6 +35,7 @@ A Persona 5–styled Android music player for your **local music** and **YouTube
   - **Radio tab (ラジオ)**: Japanese live radio from radiko – any of the 47 prefectures or all of Japan by region, with the programme and the song on air right now, also from outside Japan (login method of rajiko).
   - Star your **favourite stations** (top of the Radio tab, on Home and in Android Auto), browse each station's **programme guide (番組表)** with 5-minute reminders, and heart a song on air to save it to **Radio finds** (matched on YouTube Music and liked).
   - **Velvet Room (ベルベットルーム)**: Igor reads your last 90 days – your arcana, traits and listening patterns – and picks songs YouTube Music plays next to several of your favourites that you haven't heard yet ("Igor's picks", refreshed weekly). Optionally, with your own Anthropic API key, Igor (Claude) writes a personal reading and names songs to try.
+  - **AWA tab** (experimental): AWA's daily top 100 of new releases, this week's new J-Pop / K-Pop / international songs, the monthly most-picked ranking and internet-born artists – read from AWA's public playlist pages; tap a song to play it via YouTube Music or search it.
   - **Per-song stats** – times played, real listening time, average per play.
   - **Your own backgrounds** – pick any image for the player/home; it gets inked and tinted P5-style.
 - **Home** – Recent, Most Played, Song Log and a 3×3 Speed Dial built from your listening history.

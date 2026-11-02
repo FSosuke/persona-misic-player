@@ -33,3 +33,8 @@ project. No ATLUS/SEGA artwork, logos or fonts are included.
 The radiko login flow (app-style authentication with a GPS location in the chosen area) and the
 key file in `app/src/main/assets/radiko/` follow rajiko by jackyzy823
 (https://github.com/jackyzy823/rajiko), released into the public domain (Unlicense).
+
+## AWA
+
+Chart and new-release information in the AWA tab is read from AWA's public playlist pages
+(s.awa.fm, © AWA Co. Ltd.). No AWA audio is played; songs are looked up on YouTube Music.

@@ -34,7 +34,7 @@ import com.fsosuke.personamusic.youtube.HomeShelf
 import com.fsosuke.personamusic.youtube.RegionFeed
 import com.fsosuke.personamusic.youtube.YtItem
 
-enum class HomeTab(val label: String) { ForYou("For you"), Japan("Japan") }
+enum class HomeTab(val label: String) { ForYou("For you"), Japan("Japan"), Awa("AWA") }
 
 /** Slanted tab switch under the search field. */
 fun LazyListScope.homeTabs(selected: HomeTab, onSelect: (HomeTab) -> Unit) {

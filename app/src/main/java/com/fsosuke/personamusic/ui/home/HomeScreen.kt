@@ -1,5 +1,16 @@
 package com.fsosuke.personamusic.ui.home
 
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
+import com.fsosuke.personamusic.awa.AwaTrack
+import com.fsosuke.personamusic.awa.AwaList
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import android.widget.Toast
 import androidx.compose.foundation.lazy.items
 import com.fsosuke.personamusic.radio.RadikoStation
 import com.fsosuke.personamusic.radio.Radiko
@@ -129,6 +140,23 @@ fun HomeScreen(
     var homeTab by rememberSaveable { mutableStateOf(HomeTab.ForYou) }
     val japanFeed by container.ytLibrary.japan.collectAsStateWithLifecycle()
     LaunchedEffect(homeTab) { if (homeTab == HomeTab.Japan) container.ytLibrary.loadJapan() }
+    // AWA tab: charts and new releases from AWA, played via YouTube Music.
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var awaList by rememberSaveable { mutableStateOf(AwaList.Daily) }
+    var awaState by remember { mutableStateOf<AwaState>(AwaState.Loading) }
+    var awaAttempt by remember { mutableIntStateOf(0) }
+    var awaShowAll by remember { mutableStateOf(false) }
+    var awaResolving by remember { mutableStateOf(false) }
+    LaunchedEffect(homeTab, awaList, awaAttempt) {
+        if (homeTab != HomeTab.Awa) return@LaunchedEffect
+        awaShowAll = false
+        if (awaState !is AwaState.Loaded || awaAttempt > 0) awaState = AwaState.Loading
+        awaState = runCatching { container.awaCharts.load(awaList, force = awaAttempt > 0) }
+            .fold({ AwaState.Loaded(it) }, { AwaState.Failed(it.localizedMessage ?: it.javaClass.simpleName) })
+    }
+    suspend fun findOnYouTube(track: AwaTrack): Song? =
+        runCatching { container.ytLibrary.search(track.query).songs.firstOrNull() }.getOrNull()
     val radioStations by container.radioFavourites.stations.collectAsStateWithLifecycle()
     val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
 
@@ -201,6 +229,34 @@ fun HomeScreen(
                 onPlay = { songs, index -> play(songs, index) },
                 onOpenCollection = onOpenYtPlaylist,
                 onRetry = { container.ytLibrary.loadJapan(force = true) },
+            )
+        } else if (!typing && !showHistory && submitted.isBlank() && homeTab == HomeTab.Awa) {
+            awaTab(
+                selected = awaList,
+                state = awaState,
+                showAll = awaShowAll,
+                resolving = awaResolving,
+                onSelect = { if (it != awaList) { awaList = it; awaState = AwaState.Loading } },
+                onRetry = { awaAttempt++ },
+                onPlay = { track ->
+                    scope.launch {
+                        val song = findOnYouTube(track)
+                        if (song != null) play(listOf(song), 0)
+                        else Toast.makeText(context, "\"${track.title}\" isn't on YouTube Music", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onPlayAll = { tracks ->
+                    scope.launch {
+                        awaResolving = true
+                        val gate = Semaphore(4)
+                        val songs = tracks.map { t -> async { gate.withPermit { findOnYouTube(t) } } }.awaitAll().filterNotNull()
+                        awaResolving = false
+                        if (songs.isNotEmpty()) play(songs.distinctBy { it.id }, 0)
+                        else Toast.makeText(context, "Couldn't find these songs on YouTube Music", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onSearch = { track -> vm.setQuery(track.query); vm.submit() },
+                onShowAll = { awaShowAll = true },
             )
         } else if (!typing && !showHistory && submitted.isBlank()) {
             item { WrappedBanner(onOpenWrapped) }
