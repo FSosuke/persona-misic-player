@@ -43,7 +43,10 @@ import java.util.concurrent.TimeUnit
 class AppContainer(context: Context) {
     /** For fire-and-forget writes that must outlive the screen that started them. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val settings = AppSettings(context)
+    val settings = AppSettings(context).also { settings ->
+        // The Zero-One skin swaps fonts, names and backgrounds app-wide.
+        com.fsosuke.personamusic.ui.theme.Skin.zeroOne = settings.theme.value == com.fsosuke.personamusic.data.PersonaTheme.ZERO_ONE
+    }
     val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

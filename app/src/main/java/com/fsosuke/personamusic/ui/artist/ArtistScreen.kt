@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.artist
 
+import com.fsosuke.personamusic.ui.theme.rankLabel
+import com.fsosuke.personamusic.ui.theme.displayName
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -137,7 +139,7 @@ fun ArtistScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
                 ShoutLabel(
-                    if (confidant.isMax) "${confidant.arcana.title} · MAX" else "${confidant.arcana.title} · Rank $rank",
+                    if (confidant.isMax) "${confidant.arcana.displayName} · MAX" else "${confidant.arcana.displayName} · ${rankLabel(rank)}",
                     Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 60.dp, top = 16.dp),
                     tilt = -6f,
                 )

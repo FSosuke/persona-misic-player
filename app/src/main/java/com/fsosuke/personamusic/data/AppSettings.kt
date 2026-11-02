@@ -11,6 +11,7 @@ enum class PersonaTheme(val label: String) {
     P4("Persona 4 · Midnight Yellow"),
     P3("Persona 3 · Moonlight Blue"),
     ROYAL("Persona 5 Royal · Crimson"),
+    ZERO_ONE("Kamen Rider Zero-One · Rising Hopper"),
 }
 
 enum class AudioQuality(val label: String) {

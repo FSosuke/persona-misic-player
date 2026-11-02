@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.confidant
 
+import com.fsosuke.personamusic.ui.theme.rankLabel
+import com.fsosuke.personamusic.ui.theme.displayName
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -86,7 +88,7 @@ fun RankUpOverlay() {
                 )
                 Box(Modifier.background(Color.Black).padding(horizontal = 12.dp, vertical = 4.dp)) {
                     Text(
-                        "${event.confidant.arcana.title} · Rank ${event.previousRank} → " +
+                        "${event.confidant.arcana.displayName} · ${rankLabel(event.previousRank)} → " +
                             if (event.confidant.isMax) "MAX" else "${event.confidant.rank}",
                         color = colors.accent,
                         style = PersonaType.label.copy(fontSize = 16.sp),

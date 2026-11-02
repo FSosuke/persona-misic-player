@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.components
 
+import com.fsosuke.personamusic.ui.theme.Skin
+import com.fsosuke.personamusic.ui.theme.Lingo
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.LinearEasing
@@ -145,7 +147,9 @@ fun Graffiti(text: String, modifier: Modifier = Modifier, fontSize: TextUnit = 4
     val height = (fontSize.value * 1.5f).dp
     Canvas(modifier.rotate(-14f).size(width, height)) {
         val style = PersonaType.graffiti.copy(fontSize = fontSize)
-        val layout = measurer.measure(text, style)
+        // The Zero-One skin shouts "HENSHIN" where Persona sprays "CHANGE".
+        val shown = if (Skin.zeroOne && text.equals("CHANGE", ignoreCase = true)) "HENSHIN" else Lingo.of(text)
+        val layout = measurer.measure(shown.uppercase(), style)
         drawText(layout, color = Color.Black, topLeft = Offset(4f, 5f))
         drawText(layout, color = color, topLeft = Offset.Zero)
         // Arrow flourish after the word.
@@ -255,7 +259,7 @@ fun ShoutLabel(text: String, modifier: Modifier = Modifier, tilt: Float = -4f) {
             .background(Color.Black)
             .padding(horizontal = 8.dp),
     ) {
-        Text(text.uppercase(), color = Color.White, style = PersonaType.shout)
+        Text(Lingo.of(text).uppercase(), color = Color.White, style = PersonaType.shout)
         JapaneseSubtitles.of(text)?.let { Text(it, color = Color.White.copy(alpha = 0.7f), style = PersonaType.caption.copy(fontSize = 9.sp)) }
     }
 }

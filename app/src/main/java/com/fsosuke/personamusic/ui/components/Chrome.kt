@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui.components
 
+import com.fsosuke.personamusic.ui.theme.Lingo
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -201,7 +202,7 @@ fun CalloutBanner(text: String, modifier: Modifier = Modifier, pointLeft: Boolea
             .padding(start = 28.dp, end = 36.dp, top = 10.dp, bottom = 18.dp),
     ) {
         Column {
-            Text(text.uppercase(), color = Color.White, style = PersonaType.label.copy(fontSize = 20.sp))
+            Text(Lingo.of(text).uppercase(), color = Color.White, style = PersonaType.label.copy(fontSize = 20.sp))
             JapaneseSubtitles.of(text)?.let {
                 Text(it, color = Color.White.copy(alpha = 0.7f), style = PersonaType.caption.copy(fontSize = 10.sp, letterSpacing = 2.sp))
             }
@@ -221,7 +222,7 @@ fun PersonaButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text.uppercase(),
+            Lingo.of(text).uppercase(),
             color = if (inverted) Color.Black else colors.onAccent,
             style = PersonaType.label,
         )

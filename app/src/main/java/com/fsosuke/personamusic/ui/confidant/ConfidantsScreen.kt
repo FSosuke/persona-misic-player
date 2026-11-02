@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.confidant
 
+import com.fsosuke.personamusic.ui.theme.rankLabel
+import com.fsosuke.personamusic.ui.theme.displayName
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -96,7 +98,7 @@ private fun ConfidantRow(confidant: Confidant, index: Int) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(confidant.artist, color = Color.White, style = PersonaType.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${confidant.arcana.title} · " + if (confidant.isMax) "RANK MAX" else "Rank ${confidant.rank}",
+                "${confidant.arcana.displayName} · " + rankLabel(confidant.rank, confidant.isMax),
                 color = colors.accent,
                 style = PersonaType.label.copy(fontSize = 13.sp),
             )

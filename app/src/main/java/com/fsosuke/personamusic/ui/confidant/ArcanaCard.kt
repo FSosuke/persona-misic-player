@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui.confidant
 
+import com.fsosuke.personamusic.ui.theme.displayName
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,7 +70,7 @@ fun ArcanaCard(arcana: Arcana, modifier: Modifier = Modifier, textScale: Float =
                 }
             }
             Text(
-                arcana.title.uppercase(),
+                arcana.displayName.uppercase(),
                 color = Color.White,
                 style = TextStyle(fontFamily = PersonaFonts.archivoBlack, fontSize = (11 * textScale).sp, letterSpacing = (1 * textScale).sp),
                 textAlign = TextAlign.Center,

@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.wrapped
 
+import com.fsosuke.personamusic.ui.theme.rankLabel
+import com.fsosuke.personamusic.ui.theme.displayName
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -200,7 +202,7 @@ private fun TopArtistSlide(data: WrappedData) {
         Text(top.confidant.artist, color = Color.White, style = PersonaType.title.copy(fontSize = 28.sp), textAlign = TextAlign.Center)
         Box(Modifier.background(Color.Black).padding(horizontal = 10.dp, vertical = 2.dp)) {
             Text(
-                "${top.playsInPeriod} plays · ${top.confidant.arcana.title} · " + if (top.confidant.isMax) "MAX" else "Rank ${top.confidant.rank}",
+                "${top.playsInPeriod} plays · ${top.confidant.arcana.displayName} · " + rankLabel(top.confidant.rank, top.confidant.isMax),
                 color = colors.accent,
                 style = PersonaType.label.copy(fontSize = 15.sp),
             )
@@ -213,7 +215,7 @@ private fun TopArtistSlide(data: WrappedData) {
 private fun ArtistsSlide(data: WrappedData) {
     RankedList(
         title = "Your confidants",
-        rows = data.topArtists.map { Triple(it.confidant.artist, "${it.playsInPeriod} plays · ${it.confidant.arcana.title}", null) },
+        rows = data.topArtists.map { Triple(it.confidant.artist, "${it.playsInPeriod} plays · ${it.confidant.arcana.displayName}", null) },
     )
 }
 
@@ -294,7 +296,7 @@ private fun OutroSlide(data: WrappedData, onClose: () -> Unit) {
             val text = buildString {
                 appendLine("My ${data.period.title} Wrapped – Persona Music")
                 appendLine("${data.listenedMs / 60_000} minutes · ${data.plays} plays")
-                data.topArtists.firstOrNull()?.let { appendLine("Top confidant: ${it.confidant.artist} (${it.confidant.arcana.title})") }
+                data.topArtists.firstOrNull()?.let { appendLine("Top confidant: ${it.confidant.artist} (${it.confidant.arcana.displayName})") }
                 data.topSongs.take(3).forEachIndexed { i, s -> appendLine("${i + 1}. ${s.song.title} – ${s.song.artist}") }
             }
             context.startActivity(

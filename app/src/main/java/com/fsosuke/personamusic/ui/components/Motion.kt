@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui.components
 
+import com.fsosuke.personamusic.ui.theme.Skin
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -159,8 +160,11 @@ fun TakeYourHeartSplash() {
             },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(Modifier.padding(4.dp)) { RansomText("TAKE YOUR", fontSize = 40.sp) }
-            Box(Modifier.padding(4.dp)) { RansomText("HEART", fontSize = 64.sp, style = RansomStyle.Outline) }
+            // Zero-One: the driver's "AUTHORIZE" → "PROGRISE!" call instead of the calling card.
+            Box(Modifier.padding(4.dp)) { RansomText(if (Skin.zeroOne) "AUTHORIZE" else "TAKE YOUR", fontSize = 40.sp) }
+            Box(Modifier.padding(4.dp)) {
+                RansomText(if (Skin.zeroOne) "PROGRISE!" else "HEART", fontSize = 64.sp, style = RansomStyle.Outline)
+            }
             Text(
                 current.title,
                 color = Color.White,

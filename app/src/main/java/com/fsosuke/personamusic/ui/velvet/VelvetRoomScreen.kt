@@ -1,5 +1,8 @@
 package com.fsosuke.personamusic.ui.velvet
 
+import com.fsosuke.personamusic.ui.theme.displayName
+import com.fsosuke.personamusic.ui.theme.Skin
+import com.fsosuke.personamusic.ui.theme.Lingo
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,9 +65,10 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-private val VelvetBlue = Color(0xFF0B1E5B)
-private val VelvetDeep = Color(0xFF050B24)
-private val VelvetGold = Color(0xFFE8C766)
+// Velvet blue and gold – or Zea's dark teal and Zero-One yellow in that skin.
+private val VelvetBlue get() = if (Skin.zeroOne) Color(0xFF0B2A30) else Color(0xFF0B1E5B)
+private val VelvetDeep get() = if (Skin.zeroOne) Color(0xFF030A0C) else Color(0xFF050B24)
+private val VelvetGold get() = if (Skin.zeroOne) Color(0xFFFFE100) else Color(0xFFE8C766)
 
 /** The Velvet Room: Igor reads your listening habits and hands out picks. */
 @Composable
@@ -168,7 +172,7 @@ private fun VelvetHeader(onBack: () -> Unit) {
                 RansomText("Velvet Room", fontSize = 38.sp, style = RansomStyle.Outline)
             }
             Box(Modifier.background(VelvetGold).padding(horizontal = 8.dp)) {
-                Text("ベルベットルーム", color = VelvetDeep, style = PersonaType.caption.copy(fontSize = 11.sp, letterSpacing = 2.sp))
+                Text(if (Skin.zeroOne) "ゼア解析" else "ベルベットルーム", color = VelvetDeep, style = PersonaType.caption.copy(fontSize = 11.sp, letterSpacing = 2.sp))
             }
         }
     }
@@ -188,15 +192,15 @@ private fun ArcanaCard(reading: ListeningReading) {
             .padding(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("YOUR ARCANA", color = VelvetGold, style = PersonaType.label.copy(fontSize = 13.sp, letterSpacing = 3.sp))
+        Text(Lingo.of("Your arcana").uppercase(), color = VelvetGold, style = PersonaType.label.copy(fontSize = 13.sp, letterSpacing = 3.sp))
         Text(arcana.numeral, color = VelvetGold, style = PersonaType.title.copy(fontSize = 44.sp))
-        RansomText(arcana.title, fontSize = 30.sp)
-        Text(arcana.japanese, color = Color(0xFFB8C2E8), style = PersonaType.body)
+        RansomText(arcana.displayName, fontSize = 30.sp)
+        if (!Skin.zeroOne) Text(arcana.japanese, color = Color(0xFFB8C2E8), style = PersonaType.body) else Text("PROGRISE KEY", color = Color(0xFFB8C2E8), style = PersonaType.label)
         Spacer(Modifier.height(10.dp))
         Text("\"${arcana.reading}\"", color = Color.White, style = PersonaType.body)
         reading.runnerUp?.let {
             Spacer(Modifier.height(8.dp))
-            Text("Also stirring: ${it.title} (${it.japanese})", color = Color(0xFFB8C2E8), style = PersonaType.caption)
+            Text("Also stirring: ${it.displayName}" + if (Skin.zeroOne) "" else " (${it.japanese})", color = Color(0xFFB8C2E8), style = PersonaType.caption)
         }
         Spacer(Modifier.height(6.dp))
         Text("From ${reading.plays} plays in the last 90 days", color = Color(0xFF7F8AB8), style = PersonaType.caption.copy(fontSize = 11.sp))

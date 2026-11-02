@@ -13,8 +13,8 @@ android {
         applicationId = "com.fsosuke.personamusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 34
-        versionName = "0.28.1"
+        versionCode = 35
+        versionName = "0.29.0"
 
         // Where the in-app updater looks for new releases: CI passes the public releases repo
         // (UPDATE_REPO) or falls back to the source repo.

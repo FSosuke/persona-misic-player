@@ -38,3 +38,8 @@ key file in `app/src/main/assets/radiko/` follow rajiko by jackyzy823
 
 Chart and new-release information in the AWA tab is read from AWA's public playlist pages
 (s.awa.fm, © AWA Co. Ltd.). No AWA audio is played; songs are looked up on YouTube Music.
+
+## Zero-One skin fonts
+
+Saira Stencil One and Saira Condensed (© The Saira Project Authors, SIL Open Font License 1.1),
+from Google Fonts. Kamen Rider Zero-One names are used as a fan tribute; no Toei artwork is included.

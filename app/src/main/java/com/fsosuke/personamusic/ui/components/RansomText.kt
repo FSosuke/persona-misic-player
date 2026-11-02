@@ -1,5 +1,8 @@
 package com.fsosuke.personamusic.ui.components
 
+import com.fsosuke.personamusic.ui.theme.PersonaType
+import com.fsosuke.personamusic.ui.theme.Lingo
+import com.fsosuke.personamusic.ui.theme.Skin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -58,6 +61,10 @@ fun RansomText(
     style: RansomStyle = RansomStyle.Collage,
     useAccent: Boolean = true,
 ) {
+    if (Skin.zeroOne) {
+        StencilTitle(Lingo.of(text), modifier, fontSize, boxed = style == RansomStyle.Collage)
+        return
+    }
     val colors = LocalPersonaColors.current
     val letters = remember(text, style, useAccent) {
         val random = Random(text.hashCode())
@@ -117,5 +124,22 @@ fun RansomText(
                 )
             }
         }
+    }
+}
+
+/**
+ * Zero-One counterpart of the ransom title: forward-slanted stencil letters, on a yellow plate
+ * with a black edge when [boxed] (like the Zero-One logo), plain white otherwise.
+ */
+@Composable
+private fun StencilTitle(text: String, modifier: Modifier, fontSize: TextUnit, boxed: Boolean) {
+    val colors = LocalPersonaColors.current
+    val style = PersonaType.display.copy(fontSize = fontSize, lineHeight = fontSize * 1.05f)
+    if (boxed) {
+        Box(modifier.background(Color.Black).padding(start = 4.dp).background(colors.accent).padding(horizontal = 8.dp, vertical = 1.dp)) {
+            Text(text.uppercase(), color = colors.onAccent, style = style)
+        }
+    } else {
+        Text(text.uppercase(), color = Color.White, style = style, modifier = modifier)
     }
 }

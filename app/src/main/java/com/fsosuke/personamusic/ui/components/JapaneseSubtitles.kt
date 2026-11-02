@@ -1,11 +1,23 @@
 package com.fsosuke.personamusic.ui.components
 
+import com.fsosuke.personamusic.ui.theme.Lingo
+
 /**
  * Small Japanese subtitles under English headings, the way Persona's Japanese menus pair
  * words. Lookup is by heading text (case-insensitive); unknown headings get none.
  */
 object JapaneseSubtitles {
     private val map = mapOf(
+        // Zero-One skin names (see Lingo)
+        "progrise keys" to "プログライズキー",
+        "progrise key" to "プログライズキー",
+        "zea analysis" to "ゼア解析",
+        "zea's picks" to "ゼアの推薦",
+        "rider specs" to "ライダースペック",
+        "mission report" to "ミッションレポート",
+        "schedule" to "スケジュール",
+        "level up" to "レベルアップ",
+        "standby" to "スタンバイ",
         // Screens
         "home" to "ホーム",
         "library" to "ライブラリ",
@@ -61,5 +73,5 @@ object JapaneseSubtitles {
         "take your time" to "ゆっくりでいい",
     )
 
-    fun of(english: String): String? = map[english.trim().lowercase()]
+    fun of(english: String): String? = map[Lingo.of(english.trim()).lowercase()] ?: map[english.trim().lowercase()]
 }

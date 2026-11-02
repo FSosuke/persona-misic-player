@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.components
 
+import androidx.compose.runtime.State
+import com.fsosuke.personamusic.ui.theme.Skin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.composed
 import androidx.compose.ui.Modifier
@@ -44,6 +46,7 @@ fun Modifier.starPattern(
     drifting: Boolean = false,
 ): Modifier = composed {
     val drift = if (drifting) rememberDrift(periodMs = 40_000) else null
+    if (Skin.zeroOne) return@composed hexCircuit(background, starColor, cell * 0.55f, drift)
     drawWithCache {
         val star = unitStarPath()
         val random = Random(42)
@@ -129,4 +132,54 @@ fun jaggedCardShape(seed: Int): PolygonShape {
     val r = Random(seed)
     fun j() = r.nextFloat() * 0.05f
     return PolygonShape(listOf(Offset(j(), j()), Offset(1f - j(), j()), Offset(1f - j(), 1f - j()), Offset(j(), 1f - j())))
+}
+
+/**
+ * Zero-One skin backdrop: a honeycomb of thin hexagons with a few glowing circuit traces, like
+ * the Hiden Intelligence screens. Repeats every screen width when [drift] moves it.
+ */
+private fun Modifier.hexCircuit(background: Color, lineColor: Color, radius: Float, drift: State<Float>?): Modifier = drawWithCache {
+    val width = size.width
+    val height = size.height
+    val hexWidth = radius * kotlin.math.sqrt(3f)
+    val hexes = Path().apply {
+        var row = 0
+        var y = 0f
+        while (y < height + radius * 2) {
+            var x = if (row % 2 == 0) 0f else hexWidth / 2
+            while (x < width) {
+                for (i in 0..6) {
+                    val angle = Math.toRadians((60.0 * i) - 30.0)
+                    val px = x + radius * kotlin.math.cos(angle).toFloat()
+                    val py = y + radius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) moveTo(px, py) else lineTo(px, py)
+                }
+                x += hexWidth
+            }
+            y += radius * 1.5f
+            row++
+        }
+    }
+    val random = Random(7)
+    val traces = (0 until 6).map {
+        Path().apply {
+            var x = random.nextFloat() * width
+            var y = random.nextFloat() * height
+            moveTo(x, y)
+            repeat(4) { step ->
+                if (step % 2 == 0) x += (random.nextFloat() - 0.3f) * width * 0.4f else y += (random.nextFloat() - 0.5f) * height * 0.3f
+                lineTo(x, y)
+            }
+        }
+    }
+    // Hiden-blue circuit traces.
+    val traceColor = Color(0xFF00D1FF).copy(alpha = 0.35f)
+    onDrawBehind {
+        drawRect(background)
+        val draw: DrawScope.() -> Unit = {
+            drawPath(hexes, lineColor, style = Stroke(width = 2f))
+            traces.forEach { drawPath(it, traceColor, style = Stroke(width = 3f)) }
+        }
+        if (drift == null) draw() else drawDrifting(drift.value * width, width, draw)
+    }
 }
