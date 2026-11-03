@@ -163,6 +163,15 @@ class AppSettings(context: Context) {
         _reduceMotion.value = value
     }
 
+    private val _hideIndian = MutableStateFlow(prefs.getBoolean(KEY_HIDE_INDIAN, false))
+    /** Drop Indian / Punjabi music from recommendations, radio, autoplay, confidants and Release Radar. */
+    val hideIndian: StateFlow<Boolean> = _hideIndian.asStateFlow()
+
+    fun setHideIndian(value: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_INDIAN, value).apply()
+        _hideIndian.value = value
+    }
+
     private val _japaneseOnly = MutableStateFlow(prefs.getBoolean(KEY_JAPANESE_ONLY, false))
     /** Only recommend / auto-play Japanese music (plus artists the user already listens to). */
     val japaneseOnly: StateFlow<Boolean> = _japaneseOnly.asStateFlow()
@@ -221,6 +230,7 @@ class AppSettings(context: Context) {
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_JAPANESE_ONLY = "japanese_only"
         const val KEY_HOME_REGION = "home_region"
+        const val KEY_HIDE_INDIAN = "hide_indian"
         const val KEY_REDUCE_MOTION = "reduce_motion"
         const val KEY_RADIKO_AREA = "radiko_area"
         const val KEY_RELEASE_RADAR = "release_radar"

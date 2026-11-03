@@ -57,6 +57,7 @@ class ReleaseRadar(
     private val ytLibrary: YtMusicLibrary,
     private val dao: MusicDao,
     private val settings: AppSettings,
+    private val rules: () -> com.fsosuke.personamusic.data.ContentFilter.Rules,
 ) {
     private val prefs = context.getSharedPreferences("release_radar", Context.MODE_PRIVATE)
     private val mutex = Mutex()
@@ -86,11 +87,14 @@ class ReleaseRadar(
         try {
             val confidants = Confidants.fromCounts(dao.artistPlayCountsNow()).filter { it.rank >= MIN_RANK }.take(MAX_CONFIDANTS)
             val artists = (followed.value + confidants.map { it.artist }).distinctBy { it.lowercase() }
+                .filter { rules().allowsArtist(it) }
             val seen = loadSeen()
             val found = mutableListOf<Release>()
             val now = System.currentTimeMillis()
             for (artist in artists) {
                 val page = runCatching { ytLibrary.artist(artist, null) }.getOrNull() ?: continue
+                // The page is found by name search – skip it when it belongs to someone else.
+                if (!sameArtist(artist, page.name)) continue
                 val collections = page.shelves.flatMap { it.items }.filterIsInstance<YtItem.Collection>()
                     .map { it.playlist }
                     .filter { it.id.startsWith("MPRE") }
@@ -98,7 +102,7 @@ class ReleaseRadar(
                 val key = artist.lowercase()
                 val known = seen[key]
                 if (known != null) {
-                    collections.filter { it.id !in known }.forEach { p ->
+                    collections.filter { it.id !in known && rules().allowsRelease(it.title, page.name) }.forEach { p ->
                         found += Release(p.id, p.title, page.name, p.subtitle, p.thumbnail, now)
                     }
                 }
@@ -117,6 +121,13 @@ class ReleaseRadar(
         } finally {
             _checking.value = false
         }
+    }
+
+    private fun sameArtist(wanted: String, found: String): Boolean {
+        fun norm(text: String) = text.lowercase().filter { it.isLetterOrDigit() }
+        val a = norm(wanted)
+        val b = norm(found)
+        return a.isNotEmpty() && b.isNotEmpty() && (a == b || a.contains(b) || b.contains(a))
     }
 
     fun schedule() {

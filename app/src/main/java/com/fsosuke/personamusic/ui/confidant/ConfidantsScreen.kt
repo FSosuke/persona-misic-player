@@ -1,5 +1,15 @@
 package com.fsosuke.personamusic.ui.confidant
 
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.VisibilityOff
+import android.widget.Toast
 import com.fsosuke.personamusic.ui.theme.rankLabel
 import com.fsosuke.personamusic.ui.theme.displayName
 import androidx.compose.foundation.background
@@ -47,7 +57,13 @@ import com.fsosuke.personamusic.ui.theme.PersonaType
 @Composable
 fun ConfidantsScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
     val container = LocalAppContainer.current
-    val confidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allConfidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
+    val rules by container.contentFilter.rules.collectAsStateWithLifecycle()
+    // Hidden artists (and Indian music, if filtered) don't show up as confidants.
+    val confidants = remember(allConfidants, rules) { allConfidants.filter { rules.allowsArtist(it.artist) } }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var hiding by remember { mutableStateOf<Confidant?>(null) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
         item {
@@ -71,14 +87,37 @@ fun ConfidantsScreen(onBack: () -> Unit, contentPadding: PaddingValues) {
             }
         }
         itemsIndexed(confidants, key = { _, c -> c.artist }) { index, confidant ->
-            ConfidantRow(confidant, index)
+            ConfidantRow(confidant, index, onHide = { hiding = confidant })
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+    hiding?.let { confidant ->
+        AlertDialog(
+            onDismissRequest = { hiding = null },
+            containerColor = Color.Black,
+            title = { Text("Hide ${confidant.artist}?", color = Color.White, style = PersonaType.title) },
+            text = {
+                Text(
+                    "They disappear from your confidants, Release Radar, recommendations, radio and autoplay. " +
+                        "Undo any time under Customize > Hidden songs & artists.",
+                    color = LocalPersonaColors.current.muted,
+                    style = PersonaType.body,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    hiding = null
+                    scope.launch { container.contentFilter.hideArtist(confidant.artist) }
+                    Toast.makeText(context, "${confidant.artist} hidden", Toast.LENGTH_SHORT).show()
+                }) { Text("Hide") }
+            },
+            dismissButton = { TextButton(onClick = { hiding = null }) { Text("Cancel") } },
+        )
     }
 }
 
 @Composable
-private fun ConfidantRow(confidant: Confidant, index: Int) {
+private fun ConfidantRow(confidant: Confidant, index: Int, onHide: () -> Unit) {
     val colors = LocalPersonaColors.current
     val openArtist = LocalOpenArtist.current
     Row(
@@ -118,6 +157,9 @@ private fun ConfidantRow(confidant: Confidant, index: Int) {
             } else {
                 Text("${confidant.plays} plays · bond complete", color = colors.muted, style = PersonaType.caption.copy(fontSize = 11.sp))
             }
+        }
+        IconButton(onClick = onHide) {
+            Icon(Icons.Filled.VisibilityOff, contentDescription = "Hide ${confidant.artist}", tint = Color(0xFF888888))
         }
     }
 }

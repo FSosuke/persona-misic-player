@@ -567,6 +567,14 @@ private fun RecommendationsSection(onOpenHidden: () -> Unit) {
             checked = japaneseOnly,
             onChange = container.settings::setJapaneseOnly,
         )
+        val hideIndian by container.settings.hideIndian.collectAsStateWithLifecycle()
+        SettingSwitch(
+            title = "Hide Indian music",
+            description = "No Indian / Punjabi songs or artists in recommendations, radio, autoplay, confidants and " +
+                "Release Radar (recognised by script, labels, genres and typical names).",
+            checked = hideIndian,
+            onChange = container.settings::setHideIndian,
+        )
         val region by container.settings.homeRegion.collectAsStateWithLifecycle()
         Text("Recommendations from", color = Color.White, style = PersonaType.title)
         Text(

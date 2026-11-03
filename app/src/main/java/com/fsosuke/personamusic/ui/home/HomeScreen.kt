@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.home
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.launch
@@ -130,8 +132,8 @@ fun HomeScreen(
     val recent by vm.recent.collectAsStateWithLifecycle()
     val mostPlayed by vm.mostPlayed.collectAsStateWithLifecycle()
     val songLog by vm.songLog.collectAsStateWithLifecycle()
-    val confidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
-    val newReleases by container.releaseRadar.releases.collectAsStateWithLifecycle()
+    val allConfidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allReleases by container.releaseRadar.releases.collectAsStateWithLifecycle()
     val playerState by container.player.state.collectAsStateWithLifecycle()
     val currentId = playerState.current?.id
     val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
@@ -159,6 +161,10 @@ fun HomeScreen(
         runCatching { container.ytLibrary.findSong(track.title, track.artist) }.getOrNull()
     val radioStations by container.radioFavourites.stations.collectAsStateWithLifecycle()
     val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
+    // Hidden artists (and Indian music, if filtered) are left out of confidants and new releases.
+    val confidants = remember(allConfidants, filterRules) { allConfidants.filter { filterRules.allowsArtist(it.artist) } }
+    val newReleases = remember(allReleases, filterRules) { allReleases.filter { filterRules.allowsRelease(it.title, it.artist) } }
+    var hidingReleases by remember { mutableStateOf(false) }
 
     LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
 
@@ -284,6 +290,14 @@ fun HomeScreen(
                         onOpenCollection = onOpenYtPlaylist,
                     )
                 }
+                item {
+                    Text(
+                        "Not your thing? Hide an artist",
+                        color = LocalPersonaColors.current.muted,
+                        style = PersonaType.caption,
+                        modifier = Modifier.clickable { hidingReleases = true }.padding(horizontal = 20.dp, vertical = 2.dp),
+                    )
+                }
             }
             if (ytAccount != null) {
                 if (ytFeed.home.isEmpty() && ytFeed.loading) {
@@ -354,6 +368,24 @@ fun HomeScreen(
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+    if (hidingReleases) {
+        AlertDialog(
+            onDismissRequest = { hidingReleases = false },
+            containerColor = Color.Black,
+            title = { Text("Hide an artist", color = Color.White, style = PersonaType.title) },
+            text = {
+                Column {
+                    newReleases.map { it.artist }.distinct().forEach { artist ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(artist, color = Color.White, style = PersonaType.body, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { scope.launch { container.contentFilter.hideArtist(artist) } }) { Text("Hide") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { hidingReleases = false }) { Text("Done") } },
+        )
     }
     }
 }

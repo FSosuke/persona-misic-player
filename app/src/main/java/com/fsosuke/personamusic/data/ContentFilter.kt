@@ -20,10 +20,12 @@ class ContentFilter(
         val blockedArtists: Set<String> = emptySet(),
         val japaneseOnly: Boolean = false,
         val knownArtists: Set<String> = emptySet(),
+        val hideIndian: Boolean = false,
     ) {
         fun allowsArtist(artist: String): Boolean {
             val names = artistNames(artist)
             if (names.any { it in blockedArtists }) return false
+            if (hideIndian && isIndian(artist)) return false
             if (!japaneseOnly) return true
             return isJapanese(artist) || names.any { it in knownArtists }
         }
@@ -32,17 +34,22 @@ class ContentFilter(
             if (song.id in blockedSongs) return false
             val names = artistNames(song.artist)
             if (names.any { it in blockedArtists }) return false
+            if (hideIndian && (isIndian(song.title) || isIndian(song.artist) || isIndian(song.album.orEmpty()))) return false
             if (!japaneseOnly) return true
             return isJapanese(song.title) || isJapanese(song.artist) || names.any { it in knownArtists }
         }
+
+        /** An album/single by [artist] (Release Radar). */
+        fun allowsRelease(title: String, artist: String) = allowsArtist(artist) && !(hideIndian && isIndian(title))
     }
 
-    val rules: StateFlow<Rules> = combine(dao.blocked(), dao.knownArtists(), settings.japaneseOnly) { blocked, known, japanese ->
+    val rules: StateFlow<Rules> = combine(dao.blocked(), dao.knownArtists(), settings.japaneseOnly, settings.hideIndian) { blocked, known, japanese, indian ->
         Rules(
             blockedSongs = blocked.filter { it.type == BlockType.SONG }.mapTo(HashSet()) { it.key.removePrefix("song:") },
             blockedArtists = blocked.filter { it.type == BlockType.ARTIST }.mapTo(HashSet()) { it.key.removePrefix("artist:") },
             japaneseOnly = japanese,
             knownArtists = known.flatMapTo(HashSet()) { artistNames(it) },
+            hideIndian = indian,
         )
     }.stateIn(scope, SharingStarted.Eagerly, Rules())
 
@@ -74,6 +81,24 @@ class ContentFilter(
         private val japaneseScript = Regex("[\\u3040-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF66-\\uFF9F]")
 
         fun isJapanese(text: String) = japaneseScript.containsMatchIn(text)
+
+        /** Devanagari, Gurmukhi, Bengali, Tamil, Telugu, Kannada, Malayalam … scripts. */
+        private val indianScript = Regex("[\\u0900-\\u0DFF]")
+
+        /**
+         * Typical words of Indian / Punjabi music releases in Latin script: genres, big Indian
+         * labels and common Punjabi surnames ("Desi Hood", "Namar Gill", "T-Series").
+         */
+        private val indianWords = Regex(
+            "\\b(bollywood|tollywood|kollywood|punjabi|desi|hindi|urdu|bhangra|haryanvi|bhojpuri|tamil|telugu|kannada|" +
+                "malayalam|marathi|gujarati|qawwali|ghazal|filmi|t-series|tseries|saregama|zee music|tips official|" +
+                "speed records|white hill|jass records|geet mp3|desi melodies|brown boys|" +
+                "gill|sidhu|dhillon|sandhu|brar|aujla|grewal|randhawa|bajwa|dhaliwal|chahal|kahlon|virk|sekhon|" +
+                "kaur|singh|moosewala|diljit|karan aujla|arijit|badshah|yo yo honey|honey singh)\\b",
+            RegexOption.IGNORE_CASE,
+        )
+
+        fun isIndian(text: String) = indianScript.containsMatchIn(text) || indianWords.containsMatchIn(text)
 
         /** All credited artists, lowercased: "Lyn, ATLUS Sound Team" → [lyn, atlus sound team]. */
         fun artistNames(artist: String): List<String> =

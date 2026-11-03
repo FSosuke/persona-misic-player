@@ -26,4 +26,17 @@ class ContentFilterTest {
         assertFalse(rules.allows(song("2", "Perfect", "Ed Sheeran, Beyoncé")))
         assertTrue(rules.allows(song("3", "Rivers in the Desert", "Lyn")))
     }
+
+    @Test
+    fun hideIndianDropsIndianButKeepsJapanese() {
+        val rules = ContentFilter.Rules(hideIndian = true)
+        assertFalse(rules.allows(song("1", "First Sipp", "Namar Gill, Jasmeen Akhtar")))
+        assertFalse(rules.allows(song("2", "Desi Hood", "Namar Gill")))
+        assertFalse(rules.allows(song("3", "तुम ही हो", "Arijit Singh")))
+        assertFalse(rules.allowsArtist("Diljit Dosanjh"))
+        assertTrue(rules.allows(song("4", "爆裂愛してる", "M!LK")))
+        assertTrue(rules.allows(song("5", "Bling-Bang-Bang-Born", "Creepy Nuts")))
+        assertTrue(rules.allowsRelease("Replay Mix", "YOASOBI"))
+        assertTrue(ContentFilter.Rules().allows(song("6", "Desi Hood", "Namar Gill")))
+    }
 }

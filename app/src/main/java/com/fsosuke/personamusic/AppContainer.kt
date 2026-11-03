@@ -102,7 +102,7 @@ class AppContainer(context: Context) {
             if (ups.isNotEmpty()) pendingStatUps.value = pendingStatUps.value + ups
         }
     }
-    val releaseRadar = ReleaseRadar(context, ytLibrary, database.musicDao(), settings)
+    val releaseRadar = ReleaseRadar(context, ytLibrary, database.musicDao(), settings) { contentFilter.rules.value }
     val autoDownload = AutoDownload(context, settings)
     val downloads = DownloadManager(context, httpClient, youTube, database.musicDao(), settings, appScope)
     val updates = UpdateManager(context, httpClient, appScope)
