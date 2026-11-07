@@ -187,7 +187,11 @@ fun PersonaMusicApp() {
                             onOpenVelvet = { nav.navigate(Routes.VELVET) },
                             contentPadding = padding,
                         )
-                        Tab.Library -> LibraryScreen(contentPadding = padding)
+                        Tab.Library -> LibraryScreen(
+                            contentPadding = padding,
+                            onOpenArtists = { nav.navigate(Routes.CONFIDANTS) },
+                            onOpenSaved = { nav.navigate(Routes.DOWNLOADS) },
+                        )
                         Tab.Playlists -> PlaylistsScreen(
                             onOpen = { nav.navigate(Routes.playlist(it)) },
                             onOpenYt = { nav.navigate(Routes.ytPlaylist(it)) },
