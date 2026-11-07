@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- "01": a split record (the 0) and a blade-like 1, tilted like a calling card -->
+    <group android:rotation="-8" android:pivotX="54" android:pivotY="54">
+        <group android:translateX="1.6" android:translateY="1.6">
+            <path android:fillColor="#000000" android:pathData="M41.2,35 A19,19 0 0,0 41.2,73 L41.2,64.5 A10.5,10.5 0 0,1 41.2,43.5 Z M44.8,35 A19,19 0 0,1 44.8,73 L44.8,64.5 A10.5,10.5 0 0,0 44.8,43.5 Z M70,35 L80,35 L80,73 L70,73 L70,46 L64,49.5 L64,41 Z" />
+        </group>
+        <path android:fillColor="#FFFFFF" android:pathData="M41.2,35 A19,19 0 0,0 41.2,73 L41.2,64.5 A10.5,10.5 0 0,1 41.2,43.5 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M44.8,35 A19,19 0 0,1 44.8,73 L44.8,64.5 A10.5,10.5 0 0,0 44.8,43.5 Z" />
+        <path android:fillColor="#E60012" android:pathData="M43,50.8 A3.2,3.2 0 1,1 43,57.2 A3.2,3.2 0 1,1 43,50.8 Z" />
+        <path android:fillColor="#FFE100" android:pathData="M70,35 L80,35 L80,73 L70,73 L70,46 L64,49.5 L64,41 Z" />
+    </group>
+</vector>

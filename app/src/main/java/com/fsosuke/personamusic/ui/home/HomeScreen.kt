@@ -1,0 +1,709 @@
+package com.fsosuke.personamusic.ui.home
+
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
+import com.fsosuke.personamusic.awa.AwaTrack
+import com.fsosuke.personamusic.awa.AwaList
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import android.widget.Toast
+import androidx.compose.foundation.lazy.items
+import com.fsosuke.personamusic.radio.RadikoStation
+import com.fsosuke.personamusic.radio.Radiko
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalFocusManager
+import com.fsosuke.personamusic.ui.components.LocalOpenArtist
+import com.fsosuke.personamusic.ui.search.SearchActions
+import com.fsosuke.personamusic.ui.search.searchCategory
+import com.fsosuke.personamusic.ui.search.searchFilterTabs
+import com.fsosuke.personamusic.ui.search.searchOverview
+import com.fsosuke.personamusic.ui.search.searchSuggestions
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fsosuke.personamusic.data.Confidant
+import com.fsosuke.personamusic.youtube.HomeShelf
+import com.fsosuke.personamusic.youtube.YtItem
+import com.fsosuke.personamusic.data.WrappedPeriod
+import java.time.LocalDate
+import java.time.YearMonth
+import androidx.compose.runtime.produceState
+import com.fsosuke.personamusic.data.ContentFilter
+import com.fsosuke.personamusic.data.LoggedPlay
+import com.fsosuke.personamusic.ui.confidant.ArcanaCard
+import com.fsosuke.personamusic.data.Song
+import com.fsosuke.personamusic.data.SongWithPlays
+import com.fsosuke.personamusic.ui.components.Artwork
+import com.fsosuke.personamusic.ui.components.CalloutBanner
+import com.fsosuke.personamusic.ui.components.DashedSectionTitle
+import com.fsosuke.personamusic.ui.components.DuotoneImage
+import com.fsosuke.personamusic.ui.components.StampLabel
+import com.fsosuke.personamusic.ui.components.EmptyState
+import com.fsosuke.personamusic.ui.components.LocalAppContainer
+import com.fsosuke.personamusic.ui.components.PersonaButton
+import com.fsosuke.personamusic.ui.components.slantShape
+import com.fsosuke.personamusic.ui.components.RansomText
+import com.fsosuke.personamusic.ui.components.PersonaHeader
+import com.fsosuke.personamusic.ui.components.PersonaSearchField
+import com.fsosuke.personamusic.ui.components.SongRow
+import com.fsosuke.personamusic.ui.components.TopResultCard
+import com.fsosuke.personamusic.ui.components.UpdateBanner
+import com.fsosuke.personamusic.ui.components.WithSongMenu
+import com.fsosuke.personamusic.ui.components.jaggedCardShape
+import com.fsosuke.personamusic.ui.components.starPattern
+import com.fsosuke.personamusic.ui.theme.LocalPersonaColors
+import com.fsosuke.personamusic.ui.theme.PersonaType
+import com.fsosuke.personamusic.ui.youtube.YtShelf
+
+@Composable
+fun HomeScreen(
+    onOpenSettings: () -> Unit,
+    onOpenYtPlaylist: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onOpenConfidants: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenWrapped: (WrappedPeriod) -> Unit,
+    onOpenSocial: () -> Unit,
+    onOpenVelvet: () -> Unit,
+    contentPadding: PaddingValues,
+) {
+    val container = LocalAppContainer.current
+    val vm: HomeViewModel = viewModel { HomeViewModel(container.repository, container.ytLibrary, container.searchHistory) }
+    val query by vm.query.collectAsStateWithLifecycle()
+    val submitted by vm.submitted.collectAsStateWithLifecycle()
+    val filter by vm.filter.collectAsStateWithLifecycle()
+    val suggestions by vm.suggestions.collectAsStateWithLifecycle()
+    val history by vm.searchHistory.collectAsStateWithLifecycle()
+    val results by vm.results.collectAsStateWithLifecycle()
+    val filtered by vm.filtered.collectAsStateWithLifecycle()
+    val local by vm.local.collectAsStateWithLifecycle()
+    var searchFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val openArtist = LocalOpenArtist.current
+    val recent by vm.recent.collectAsStateWithLifecycle()
+    val mostPlayed by vm.mostPlayed.collectAsStateWithLifecycle()
+    val songLog by vm.songLog.collectAsStateWithLifecycle()
+    val allConfidants by container.repository.confidants.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allReleases by container.releaseRadar.releases.collectAsStateWithLifecycle()
+    val playerState by container.player.state.collectAsStateWithLifecycle()
+    val currentId = playerState.current?.id
+    val ytAccount by container.ytAccounts.account.collectAsStateWithLifecycle()
+    val ytFeed by container.ytLibrary.feed.collectAsStateWithLifecycle()
+    val filterRules by container.contentFilter.rules.collectAsStateWithLifecycle()
+    var homeTab by rememberSaveable { mutableStateOf(HomeTab.ForYou) }
+    val japanFeed by container.ytLibrary.japan.collectAsStateWithLifecycle()
+    LaunchedEffect(homeTab) { if (homeTab == HomeTab.Japan) container.ytLibrary.loadJapan() }
+    // AWA tab: charts and new releases from AWA, played via YouTube Music.
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var awaList by rememberSaveable { mutableStateOf(AwaList.Daily) }
+    var awaState by remember { mutableStateOf<AwaState>(AwaState.Loading) }
+    var awaAttempt by remember { mutableIntStateOf(0) }
+    var awaShowAll by remember { mutableStateOf(false) }
+    var awaResolving by remember { mutableStateOf(false) }
+    LaunchedEffect(homeTab, awaList, awaAttempt) {
+        if (homeTab != HomeTab.Awa) return@LaunchedEffect
+        awaShowAll = false
+        if (awaState !is AwaState.Loaded || awaAttempt > 0) awaState = AwaState.Loading
+        awaState = runCatching { container.awaCharts.load(awaList, force = awaAttempt > 0) }
+            .fold({ AwaState.Loaded(it) }, { AwaState.Failed(it.localizedMessage ?: it.javaClass.simpleName) })
+    }
+    suspend fun findOnYouTube(track: AwaTrack): Song? =
+        runCatching { container.ytLibrary.findSong(track.title, track.artist) }.getOrNull()
+    val radioStations by container.radioFavourites.stations.collectAsStateWithLifecycle()
+    val homeShelves = remember(ytFeed.home, filterRules) { ContentFilter.filterShelves(ytFeed.home, filterRules) }
+    // Hidden artists (and Indian music, if filtered) are left out of confidants and new releases.
+    val confidants = remember(allConfidants, filterRules) { allConfidants.filter { filterRules.allowsArtist(it.artist) } }
+    val newReleases = remember(allReleases, filterRules) { allReleases.filter { filterRules.allowsRelease(it.title, it.artist) } }
+    var hidingReleases by remember { mutableStateOf(false) }
+
+    LaunchedEffect(ytAccount) { container.ytLibrary.refresh() }
+
+    fun play(songs: List<Song>, index: Int) {
+        vm.remember(songs)
+        container.player.play(songs, index)
+    }
+
+    val homeBackground by container.settings.homeBackground.collectAsStateWithLifecycle()
+    Box(Modifier.fillMaxSize()) {
+    homeBackground?.let { DuotoneImage(it, tint = null, modifier = Modifier.fillMaxSize(), alpha = 0.3f) }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = contentPadding) {
+        item {
+            PersonaHeader(
+                title = "Home",
+                action = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Tune, contentDescription = "Customize", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                },
+            ) {
+                PersonaSearchField(
+                    value = query,
+                    onValueChange = vm::setQuery,
+                    placeholder = "Search YouTube Music & library",
+                    onSearch = { vm.submit() },
+                    onFocusChange = { searchFocused = it },
+                )
+            }
+        }
+
+        val typing = query.isNotBlank() && query.trim() != submitted
+        val showHistory = searchFocused && query.isBlank() && history.isNotEmpty()
+        val actions = SearchActions(play = ::play, openCollection = onOpenYtPlaylist, openArtist = openArtist)
+
+        if (typing || showHistory) {
+            searchSuggestions(
+                query = query,
+                history = history,
+                suggestions = suggestions,
+                onPick = { picked ->
+                    vm.submit(picked)
+                    focusManager.clearFocus()
+                },
+                onFill = vm::setQuery,
+                onRemoveHistory = vm::removeFromHistory,
+                onClearHistory = vm::clearHistory,
+            )
+        } else if (submitted.isNotBlank()) {
+            searchFilterTabs(filter, vm::setFilter)
+            if (filter == SearchFilter.All) {
+                searchOverview(results, local, currentId, actions, onShowAll = vm::setFilter)
+            } else {
+                searchCategory(filter, filtered, local, currentId, actions)
+            }
+        } else {
+            item { UpdateBanner() }
+            homeTabs(homeTab) { homeTab = it }
+        }
+        if (!typing && !showHistory && submitted.isBlank() && homeTab == HomeTab.Japan) {
+            japanTab(
+                feed = japanFeed.copy(
+                    charts = ContentFilter.filterShelves(japanFeed.charts, filterRules.copy(japaneseOnly = false)),
+                    newReleases = ContentFilter.filterShelves(japanFeed.newReleases, filterRules.copy(japaneseOnly = false)),
+                ),
+                currentId = currentId,
+                onPlay = { songs, index -> play(songs, index) },
+                onOpenCollection = onOpenYtPlaylist,
+                onRetry = { container.ytLibrary.loadJapan(force = true) },
+            )
+        } else if (!typing && !showHistory && submitted.isBlank() && homeTab == HomeTab.Awa) {
+            awaTab(
+                selected = awaList,
+                state = awaState,
+                showAll = awaShowAll,
+                resolving = awaResolving,
+                onSelect = { if (it != awaList) { awaList = it; awaState = AwaState.Loading } },
+                onRetry = { awaAttempt++ },
+                onPlay = { track ->
+                    scope.launch {
+                        val song = findOnYouTube(track)
+                        if (song != null) play(listOf(song), 0)
+                        else Toast.makeText(context, "\"${track.title}\" isn't on YouTube Music", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onPlayAll = { tracks ->
+                    scope.launch {
+                        awaResolving = true
+                        val gate = Semaphore(4)
+                        val songs = tracks.map { t -> async { gate.withPermit { findOnYouTube(t) } } }.awaitAll().filterNotNull()
+                        awaResolving = false
+                        if (songs.isNotEmpty()) play(songs.distinctBy { it.id }, 0)
+                        else Toast.makeText(context, "Couldn't find these songs on YouTube Music", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onSearch = { track -> vm.setQuery(track.query); vm.submit() },
+                onShowAll = { awaShowAll = true },
+            )
+        } else if (!typing && !showHistory && submitted.isBlank()) {
+            item { WrappedBanner(onOpenWrapped) }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    item { PersonaButton("📅 Calendar", onClick = onOpenCalendar, inverted = true) }
+                    item { PersonaButton("Wrapped", onClick = { onOpenWrapped(WrappedPeriod.Month(YearMonth.now())) }) }
+                    item { PersonaButton("★ Social stats", onClick = onOpenSocial, inverted = true) }
+                    item { PersonaButton("🦋 Velvet Room", onClick = onOpenVelvet) }
+                }
+            }
+            if (radioStations.isNotEmpty()) {
+                item { YourStations(radioStations, playingId = currentId) { container.player.playRadio(it) } }
+            }
+            if (newReleases.isNotEmpty()) {
+                item {
+                    YtShelf(
+                        shelf = HomeShelf("New from your confidants", newReleases.map { YtItem.Collection(it.toPlaylist()) }),
+                        index = 1,
+                        currentSongId = currentId,
+                        onPlay = { songs, index -> play(songs, index) },
+                        onOpenCollection = onOpenYtPlaylist,
+                    )
+                }
+                item {
+                    Text(
+                        "Not your thing? Hide an artist",
+                        color = LocalPersonaColors.current.muted,
+                        style = PersonaType.caption,
+                        modifier = Modifier.clickable { hidingReleases = true }.padding(horizontal = 20.dp, vertical = 2.dp),
+                    )
+                }
+            }
+            if (ytAccount != null) {
+                if (ytFeed.home.isEmpty() && ytFeed.loading) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = LocalPersonaColors.current.accent)
+                        }
+                    }
+                }
+                ytFeed.error?.let { error ->
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "YouTube Music: $error",
+                                color = LocalPersonaColors.current.muted,
+                                style = PersonaType.caption,
+                                modifier = Modifier.weight(1f),
+                            )
+                            PersonaButton("Retry", onClick = { container.ytLibrary.refresh(force = true) })
+                        }
+                    }
+                }
+                itemsIndexed(homeShelves, key = { i, shelf -> "shelf-$i-${shelf.title}" }) { i, shelf ->
+                    YtShelf(
+                        shelf = shelf,
+                        index = i,
+                        currentSongId = currentId,
+                        onPlay = { songs, index -> play(songs, index) },
+                        onOpenCollection = onOpenYtPlaylist,
+                    )
+                }
+            }
+            if (recent.isEmpty() && ytAccount == null) {
+                item {
+                    EmptyState(
+                        title = "Take your time",
+                        message = "Search YouTube Music above or open your Library to steal your first heart… er, play your first song.",
+                    )
+                }
+            } else {
+                item { RecentSection(recent, currentId, isPlaying = playerState.isPlaying) { play(recent, it) } }
+            }
+            if (mostPlayed.isNotEmpty()) {
+                item { MostPlayedSection(mostPlayed) { play(mostPlayed.map { it.song }, it) } }
+            }
+            if (confidants.isNotEmpty()) {
+                item { ConfidantsSection(confidants.take(8), onAll = onOpenConfidants) }
+            }
+            if (songLog.isNotEmpty() || mostPlayed.isNotEmpty()) {
+                item {
+                    // The monochrome star-burst board from the P5 phone menus.
+                    Column(Modifier.fillMaxWidth().starPattern(Color.Black, Color(0xFFEDEDED), cell = 230f, strokeWidth = 16f)) {
+                        if (songLog.isNotEmpty()) SongLogSection(songLog) { entry -> play(listOf(entry.song), 0) }
+                        if (mostPlayed.isNotEmpty()) SpeedDialSection(mostPlayed) { play(mostPlayed.map { it.song }, it) }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+            }
+            if (ytAccount == null) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        PersonaButton("Connect YouTube Music", onClick = onSignIn, inverted = true)
+                    }
+                }
+            }
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+    if (hidingReleases) {
+        AlertDialog(
+            onDismissRequest = { hidingReleases = false },
+            containerColor = Color.Black,
+            title = { Text("Hide an artist", color = Color.White, style = PersonaType.title) },
+            text = {
+                Column {
+                    newReleases.map { it.artist }.distinct().forEach { artist ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(artist, color = Color.White, style = PersonaType.body, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { scope.launch { container.contentFilter.hideArtist(artist) } }) { Text("Hide") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { hidingReleases = false }) { Text("Done") } },
+        )
+    }
+    }
+}
+
+@Composable
+private fun RecentSection(songs: List<Song>, currentId: String?, isPlaying: Boolean, onPlay: (Int) -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            CalloutBanner("Recent", Modifier.padding(end = 12.dp))
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            itemsIndexed(songs, key = { _, s -> s.id }) { index, song ->
+                val isCurrent = song.id == currentId
+                WithSongMenu(song, onClick = { onPlay(index) }) { clickModifier ->
+                Column(Modifier.width(180.dp).then(clickModifier)) {
+                    Box {
+                        Artwork(
+                            song.artworkUri,
+                            Modifier
+                                .rotate(if (index % 2 == 0) -3f else 2f)
+                                .size(180.dp)
+                                .border(3.dp, if (isCurrent) colors.accent else Color.White, jaggedCardShape(index))
+                                .padding(3.dp),
+                            shape = jaggedCardShape(index),
+                        )
+                        if (isCurrent && isPlaying) {
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(10.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.accent),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = colors.onAccent, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        song.title,
+                        color = if (isCurrent) colors.accent else Color.White,
+                        style = PersonaType.title.copy(fontSize = 16.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(song.artist, color = colors.muted, style = PersonaType.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MostPlayedSection(entries: List<SongWithPlays>, onPlay: (Int) -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        CalloutBanner("Most played", Modifier.padding(start = 12.dp), pointLeft = true)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            itemsIndexed(entries, key = { _, e -> e.song.id }) { index, entry ->
+                WithSongMenu(entry.song, onClick = { onPlay(index) }) { clickModifier ->
+                Column(Modifier.width(130.dp).then(clickModifier)) {
+                    Box {
+                        Artwork(entry.song.artworkUri, Modifier.rotate(-2f).size(130.dp).border(2.dp, Color.White))
+                        Box(
+                            Modifier
+                                .rotate(-8f)
+                                .background(colors.accent)
+                                .border(2.dp, Color.White)
+                                .padding(horizontal = 10.dp, vertical = 2.dp),
+                        ) {
+                            Text("${index + 1}", color = colors.onAccent, style = PersonaType.label.copy(fontSize = 22.sp))
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(entry.song.title, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${entry.plays}× played", color = colors.muted, style = PersonaType.caption)
+                }
+                }
+            }
+        }
+    }
+}
+
+/** The "SONG LOG" paper card: artist chip • title, slightly fanned out. */
+@Composable
+private fun SongLogSection(entries: List<LoggedPlay>, onPlay: (LoggedPlay) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.CenterEnd) {
+            StampLabel("Song", "Log", Modifier.padding(end = 20.dp), tilt = -10f)
+        }
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .rotate(-2f)
+                .background(Color.White)
+                .padding(10.dp)
+                .background(Color.Black)
+                .padding(vertical = 8.dp),
+        ) {
+            entries.forEachIndexed { index, entry ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onPlay(entry) }
+                        .padding(start = (8 + index * 4).dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.background(Color.White).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                        Text(
+                            entry.song.artist.take(10).let { if (entry.song.artist.length > 10) "$it…" else it },
+                            color = Color.Black,
+                            style = PersonaType.caption,
+                            maxLines = 1,
+                        )
+                    }
+                    Text(
+                        " • ${entry.song.title}",
+                        color = Color.White,
+                        style = PersonaType.body,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (index != entries.lastIndex) {
+                    Box(Modifier.padding(start = (8 + index * 4).dp, end = 12.dp).fillMaxWidth().height(1.dp).background(Color(0xFF555555)))
+                }
+            }
+        }
+    }
+}
+
+/** 3×3 "SPEED DIAL" grid of favourites-by-playcount. */
+@Composable
+private fun SpeedDialSection(entries: List<SongWithPlays>, onPlay: (Int) -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.CenterEnd) {
+            StampLabel("Speed", "Dial", Modifier.padding(end = 28.dp), tilt = -12f)
+        }
+        Column(
+            Modifier
+                .padding(20.dp)
+                .rotate(1.5f)
+                .background(Color.White)
+                .padding(12.dp)
+                .starPattern(Color.Black, Color(0xFF1C1C1C), cell = 90f)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            entries.take(9).chunked(3).forEachIndexed { row, chunk ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    chunk.forEachIndexed { col, entry ->
+                        val index = row * 3 + col
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .rotate(((index * 37) % 7 - 3).toFloat())
+                                .clickable { onPlay(index) },
+                        ) {
+                            Artwork(entry.song.artworkUri, Modifier.fillMaxSize())
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.85f))),
+                            )
+                            Text(
+                                entry.song.title,
+                                color = Color.White,
+                                style = PersonaType.caption,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
+                            )
+                        }
+                    }
+                    repeat(3 - chunk.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp).background(colors.background))
+    }
+}
+
+/** Your strongest bonds, as arcana cards. */
+@Composable
+private fun ConfidantsSection(confidants: List<Confidant>, onAll: () -> Unit) {
+    val colors = LocalPersonaColors.current
+    val openArtist = LocalOpenArtist.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            CalloutBanner("Confidants", Modifier.padding(end = 12.dp))
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            itemsIndexed(confidants, key = { _, c -> c.artist }) { index, confidant ->
+                Column(
+                    Modifier.width(96.dp).clickable { openArtist(confidant.artist, null) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ArcanaCard(confidant.arcana, Modifier.fillMaxWidth().rotate(if (index % 2 == 0) -3f else 3f), textScale = 0.8f)
+                    Spacer(Modifier.height(8.dp))
+                    Text(confidant.artist, color = Color.White, style = PersonaType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (confidant.isMax) "MAX" else "Rank ${confidant.rank}",
+                        color = colors.accent,
+                        style = PersonaType.label.copy(fontSize = 12.sp),
+                    )
+                }
+            }
+        }
+        Text(
+            "ALL CONFIDANTS →",
+            color = colors.accent,
+            style = PersonaType.label.copy(fontSize = 14.sp),
+            modifier = Modifier.align(Alignment.End).clickable(onClick = onAll).padding(horizontal = 20.dp, vertical = 6.dp),
+        )
+    }
+}
+
+/**
+ * In the first week of a month: "Your <last month> Wrapped is ready" – once per month,
+ * and only if there is something to look back on.
+ */
+@Composable
+private fun WrappedBanner(onOpenWrapped: (WrappedPeriod) -> Unit) {
+    val container = LocalAppContainer.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val today = remember { LocalDate.now() }
+    val lastMonth = remember { YearMonth.from(today).minusMonths(1) }
+    val prefs = remember { context.getSharedPreferences("wrapped", android.content.Context.MODE_PRIVATE) }
+    var dismissed by remember { mutableStateOf(prefs.getBoolean("seen-$lastMonth", false)) }
+    val hasData by produceState(false, lastMonth) {
+        val first = container.history.firstPlayDate()
+        value = first != null && first.isBefore(lastMonth.plusMonths(1).atDay(1))
+    }
+    if (dismissed || today.dayOfMonth > 7 || !hasData) return
+    val period = WrappedPeriod.Month(lastMonth)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .rotate(-1.5f)
+            .background(Color.White, slantShape(0.02f))
+            .padding(4.dp)
+            .background(Color.Black, slantShape(0.02f))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        RansomText("Wrapped is here", fontSize = 22.sp)
+        Text("Your ${period.title} heist report is ready.", color = Color.White, style = PersonaType.body)
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            PersonaButton("Open", onClick = {
+                prefs.edit().putBoolean("seen-$lastMonth", true).apply()
+                dismissed = true
+                onOpenWrapped(period)
+            })
+            Text(
+                "LATER",
+                color = Color(0xFFAAAAAA),
+                style = PersonaType.label,
+                modifier = Modifier.clickable {
+                    prefs.edit().putBoolean("seen-$lastMonth", true).apply()
+                    dismissed = true
+                }.padding(8.dp),
+            )
+        }
+    }
+}
+
+/** Favourite radio stations as logo cards; tap to listen live. */
+@Composable
+private fun YourStations(stations: List<RadikoStation>, playingId: String?, onPlay: (RadikoStation) -> Unit) {
+    val colors = LocalPersonaColors.current
+    Column {
+        DashedSectionTitle("Your stations", Modifier.padding(horizontal = 20.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            items(stations.size, key = { stations[it].id }) { i ->
+                val station = stations[i]
+                val playing = playingId == Radiko.ID_PREFIX + station.id
+                Column(
+                    Modifier
+                        .width(132.dp)
+                        .rotate(if (i % 2 == 0) -2f else 2f)
+                        .background(if (playing) colors.accent else Color.Black, slantShape(0.05f))
+                        .border(2.dp, Color.White, slantShape(0.05f))
+                        .clickable { onPlay(station) }
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(Modifier.fillMaxWidth().height(50.dp).background(Color.White, slantShape(0.06f)).padding(4.dp)) {
+                        AsyncImage(station.logo, contentDescription = station.name, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (playing) "LIVE · ${station.name}" else station.name,
+                        color = if (playing) colors.onAccent else Color.White,
+                        style = PersonaType.caption,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
