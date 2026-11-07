@@ -1,5 +1,13 @@
 package com.fsosuke.personamusic.playback
 
+import androidx.media3.exoplayer.DecoderReuseEvaluation
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.common.Format
+import android.content.Context
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
@@ -99,7 +107,20 @@ class PlaybackService : MediaLibraryService() {
             }
         }
 
-        val player = ExoPlayer.Builder(this)
+        // Decoded audio also passes through the monitor's tap (meters + spectrum, no mic permission).
+        val monitor = container.audioMonitor
+        val renderers = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean,
+            ): AudioSink = DefaultAudioSink.Builder(context)
+                .setAudioProcessors(arrayOf(TeeAudioProcessor(monitor)))
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                .build()
+        }
+        val player = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -112,6 +133,24 @@ class PlaybackService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         player.addListener(PlayerListener(player))
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onAudioInputFormatChanged(
+                eventTime: AnalyticsListener.EventTime,
+                format: Format,
+                decoderReuseEvaluation: DecoderReuseEvaluation?,
+            ) {
+                monitor.setSource(format.sampleMimeType, format.codecs, format.sampleRate, format.channelCount, format.bitrate)
+            }
+
+            override fun onAudioDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long,
+            ) {
+                monitor.setDecoder(decoderName)
+            }
+        })
 
         val openApp = PendingIntent.getActivity(
             this,

@@ -89,6 +89,7 @@ class AppContainer(context: Context) {
     val autoBackup = AutoBackup(context, backup, settings)
     val searchHistory = SearchHistory(context)
     val contentFilter = ContentFilter(database.musicDao(), settings, appScope)
+    val audioMonitor = com.fsosuke.personamusic.monitor.AudioMonitor()
     val awaCharts = com.fsosuke.personamusic.awa.AwaCharts(httpClient)
     val igorPicks = com.fsosuke.personamusic.velvet.IgorPicks(context, repository, ytLibrary, contentFilter)
     val igorNarrator = com.fsosuke.personamusic.velvet.IgorNarrator(context)

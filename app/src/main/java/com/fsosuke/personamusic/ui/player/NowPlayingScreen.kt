@@ -85,6 +85,7 @@ fun NowPlayingScreen(
     onOpenQueue: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenCustomize: () -> Unit,
+    onOpenMonitor: () -> Unit,
 ) {
     val container = LocalAppContainer.current
     val player = container.player
@@ -334,6 +335,7 @@ fun NowPlayingScreen(
                     }
                     Unit
                 },
+                "Monitor" to { overlay = null; onOpenMonitor() },
                 "Stats" to { overlay = if (song != null) PlayerOverlay.Stats else null },
                 "Customize" to { overlay = null; onOpenCustomize() },
                 "Share" to { overlay = null; song?.let { shareSong(context, it) }; Unit },

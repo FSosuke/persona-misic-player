@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui
 
+import com.fsosuke.personamusic.ui.monitor.MonitorScreen
 import com.fsosuke.personamusic.ui.velvet.VelvetRoomScreen
 import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
@@ -97,6 +98,7 @@ private object Routes {
     const val SOUND = "sound"
     const val SOCIAL = "social"
     const val VELVET = "velvet"
+    const val MONITOR = "monitor"
     const val SMART = "smart/{id}"
     const val RADIO_SCHEDULE = "radio_schedule?station={station}"
     fun radioSchedule(station: RadikoStation) = "radio_schedule?station=" + Uri.encode(station.toJson().toString())
@@ -219,6 +221,7 @@ fun PersonaMusicApp() {
                     onOpenQueue = { nav.navigate(Routes.QUEUE) },
                     onOpenStats = { nav.navigate(Routes.STATS) },
                     onOpenCustomize = { nav.navigate(Routes.CUSTOMIZE) },
+                    onOpenMonitor = { nav.navigate(Routes.MONITOR) },
                 )
             }
             composable(Routes.YT_PLAYLIST, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
@@ -278,6 +281,7 @@ fun PersonaMusicApp() {
                 SmartPlaylistScreen(smart, onBack = { nav.popBackStack() }, contentPadding = padding)
             }
             composable(Routes.SOCIAL) { SocialStatsScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
+            composable(Routes.MONITOR) { MonitorScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.VELVET) { VelvetRoomScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.SOUND) { SoundScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }
             composable(Routes.HIDDEN) { HiddenScreen(onBack = { nav.popBackStack() }, contentPadding = padding) }

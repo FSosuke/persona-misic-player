@@ -1,5 +1,7 @@
 package com.fsosuke.personamusic.ui.player
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -63,7 +65,7 @@ fun StarMenu(visible: Boolean, onDismiss: () -> Unit, entries: List<Pair<String,
                 }
             }
             Column(
-                Modifier.align(Alignment.Center).padding(start = 80.dp),
+                Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()).padding(start = 80.dp, top = 24.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 entries.forEachIndexed { index, (label, action) ->
