@@ -34,7 +34,7 @@ fun currentRoute(context: Context): OutputRoute {
     }
     val details = buildList {
         device.sampleRates.maxOrNull()?.let { add("up to ${it / 1000.0} kHz") }
-        val bits = device.encodings.mapNotNull { encodingBits(it) }.maxOrNull()
+        val bits = device.encodings.toList().mapNotNull { encodingBits(it) }.maxOrNull()
         if (bits != null) add("$bits-bit")
         if (device.channelCounts.isNotEmpty()) add("${device.channelCounts.max()} ch")
         audio.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull()?.let { add("mixer ${it / 1000.0} kHz") }
