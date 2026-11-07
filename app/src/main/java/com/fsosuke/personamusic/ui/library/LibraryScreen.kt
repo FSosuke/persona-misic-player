@@ -1,5 +1,6 @@
 package com.fsosuke.personamusic.ui.library
 
+import androidx.compose.foundation.layout.width
 import com.fsosuke.personamusic.ui.theme.Lingo
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.geometry.Offset
